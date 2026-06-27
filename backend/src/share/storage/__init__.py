@@ -2,6 +2,7 @@
 
 from .object_storage import (
     ARTIFACTS_PREFIX,
+    PUBLIC_PREFIX,
     RAW_PREFIX,
     TMP_PREFIX,
     ObjectStorage,
@@ -10,6 +11,7 @@ from .object_storage import (
 
 __all__ = [
     "ARTIFACTS_PREFIX",
+    "PUBLIC_PREFIX",
     "RAW_PREFIX",
     "TMP_PREFIX",
     "ObjectStorage",

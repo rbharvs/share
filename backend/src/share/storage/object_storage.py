@@ -30,6 +30,12 @@ TMP_PREFIX = "tmp/"
 RAW_PREFIX = "raw/"
 ARTIFACTS_PREFIX = "artifacts/"
 
+#: ``u/`` is the public-bucket prefix. Publish writes ``u/{sha}/index.html`` so a
+#: bare ``/u/{sha}/`` request resolves to the index document at the CDN edge. The
+#: shape mirrors the ``/u/{sha}`` private route exactly so the same SHA addresses
+#: both the authenticated preview and the published public copy.
+PUBLIC_PREFIX = "u/"
+
 #: boto3/S3 error codes that mean "the object is not there" — collapsed to
 #: ``None`` rather than surfaced as an error.
 _MISSING_CODES = frozenset({"NoSuchKey", "NoSuchBucket", "NotFound", "404"})
@@ -53,6 +59,22 @@ class ObjectStorage(Protocol):
 
     def artifact_key(self, sha256: str) -> str:
         """Return the private rendered-artifact key for a finalized SHA."""
+
+    def public_key(self, sha256: str) -> str:
+        """Return the public-bucket key for a published SHA (``u/{sha}/index.html``)."""
+
+    def put_public_object(
+        self, key: str, body: bytes, *, content_type: str | None = None
+    ) -> None:
+        """Write ``body`` to the public bucket at ``key`` (overwrite).
+
+        Used by publish to write — and repair — the public artifact. Separate
+        from :meth:`put_object` so the private and public buckets can never be
+        confused at a call site.
+        """
+
+    def delete_public_object(self, key: str) -> None:
+        """Delete the public-bucket object at ``key`` (idempotent)."""
 
     def presign_post(
         self, key: str, *, max_size_bytes: int, expires_in: int = 3600
@@ -79,11 +101,23 @@ class ObjectStorage(Protocol):
 
 
 class S3ObjectStorage:
-    """boto3-backed :class:`ObjectStorage` over the private bucket."""
+    """boto3-backed :class:`ObjectStorage` over the private and public buckets.
 
-    def __init__(self, *, client: Any, private_bucket: str) -> None:
+    ``public_bucket`` is optional so the upload vertical (which never touches the
+    public bucket) can construct storage without it; the public operations raise
+    :class:`StorageError` if invoked when it was not configured.
+    """
+
+    def __init__(
+        self,
+        *,
+        client: Any,
+        private_bucket: str,
+        public_bucket: str | None = None,
+    ) -> None:
         self._client = client
         self._private_bucket = private_bucket
+        self._public_bucket = public_bucket
 
     def tmp_key(self, upload_id: str) -> str:
         return f"{TMP_PREFIX}{upload_id}"
@@ -93,6 +127,37 @@ class S3ObjectStorage:
 
     def artifact_key(self, sha256: str) -> str:
         return f"{ARTIFACTS_PREFIX}{sha256}/index.html"
+
+    def public_key(self, sha256: str) -> str:
+        return f"{PUBLIC_PREFIX}{sha256}/index.html"
+
+    def _require_public_bucket(self) -> str:
+        if self._public_bucket is None:  # pragma: no cover - DI always supplies one.
+            raise StorageError("No public bucket configured.")
+        return self._public_bucket
+
+    def put_public_object(
+        self, key: str, body: bytes, *, content_type: str | None = None
+    ) -> None:
+        kwargs: dict[str, Any] = {
+            "Bucket": self._require_public_bucket(),
+            "Key": key,
+            "Body": body,
+        }
+        if content_type is not None:
+            kwargs["ContentType"] = content_type
+        try:
+            self._client.put_object(**kwargs)
+        except ClientError as exc:
+            raise StorageError("Writing the public object failed.") from exc
+
+    def delete_public_object(self, key: str) -> None:
+        try:
+            self._client.delete_object(
+                Bucket=self._require_public_bucket(), Key=key
+            )
+        except ClientError as exc:
+            raise StorageError("Deleting the public object failed.") from exc
 
     def presign_post(
         self, key: str, *, max_size_bytes: int, expires_in: int = 3600

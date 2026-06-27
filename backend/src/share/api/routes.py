@@ -26,6 +26,7 @@ from share.listing import (
     ContentServiceDep,
 )
 from share.preview import PreviewServiceDep
+from share.publish import PublishServiceDep
 from share.security import require_csrf
 from share.upload import (
     FinalizeRequest,
@@ -121,6 +122,44 @@ async def list_content(
     """
 
     return service.list_content(limit=limit, cursor=cursor)
+
+
+@router.post("/api/content/{sha}/publish", response_model=ContentItemResponse)
+async def publish_content(
+    sha: str,
+    service: PublishServiceDep,
+    principal: Principal = Depends(_dashboard_principal),
+    _csrf: None = Depends(require_csrf),
+) -> ContentItemResponse:
+    """Publish (or republish/repair) the public copy of ``sha``.
+
+    Reached only on the dashboard host (the gate rejects it elsewhere). Idempotent
+    and self-reconciling: regenerates the public artifact from the canonical raw
+    source, writes it to the public bucket, and atomically marks both metadata
+    items ``published``. ``require_csrf`` enforces the CSRF header + dashboard
+    Origin before any state change; an unknown SHA surfaces as ``content_not_found``.
+    """
+
+    return service.publish(sha)
+
+
+@router.post("/api/content/{sha}/unpublish", response_model=ContentItemResponse)
+async def unpublish_content(
+    sha: str,
+    service: PublishServiceDep,
+    principal: Principal = Depends(_dashboard_principal),
+    _csrf: None = Depends(require_csrf),
+) -> ContentItemResponse:
+    """Unpublish the public copy of ``sha``.
+
+    Reached only on the dashboard host (the gate rejects it elsewhere). Deletes
+    the public object (idempotent), computes the slash + no-slash CloudFront
+    invalidation paths, and atomically marks both metadata items ``unpublished``.
+    ``require_csrf`` enforces the CSRF header + dashboard Origin before any state
+    change; an unknown SHA surfaces as ``content_not_found``.
+    """
+
+    return service.unpublish(sha)
 
 
 @router.api_route("/u/{sha}", methods=["GET", "HEAD"], include_in_schema=False)

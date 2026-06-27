@@ -35,6 +35,7 @@ def get_storage() -> ObjectStorage:
     return S3ObjectStorage(
         client=boto3.client("s3", region_name=settings.region),
         private_bucket=settings.private_bucket,
+        public_bucket=settings.public_bucket,
     )
 
 
