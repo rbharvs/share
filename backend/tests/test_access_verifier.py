@@ -48,9 +48,7 @@ def test_valid_private_token_accepted(verifier, signer):
     assert principal.audience == PRIVATE_AUDIENCE
 
 
-def test_email_claim_is_lowercased_and_compared_case_insensitively(
-    verifier, signer
-):
+def test_email_claim_is_lowercased_and_compared_case_insensitively(verifier, signer):
     token = signer.sign(email="Owner@Example.com")
     principal = verifier.verify(token, HostKind.DASHBOARD)
     assert principal.email == OWNER_EMAIL

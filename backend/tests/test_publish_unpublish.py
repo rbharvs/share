@@ -157,11 +157,15 @@ def _public_object(aws, key: str) -> bytes | None:
 
 
 def _list_item(aws, sha: str) -> dict:
-    items = aws["ddb"].Table(TABLE_NAME).query(
-        KeyConditionExpression=boto3.dynamodb.conditions.Key("pk").eq(
-            "USER#default"
-        )
-    )["Items"]
+    items = (
+        aws["ddb"]
+        .Table(TABLE_NAME)
+        .query(
+            KeyConditionExpression=boto3.dynamodb.conditions.Key("pk").eq(
+                "USER#default"
+            )
+        )["Items"]
+    )
     return next(i for i in items if i["sha256"] == sha)
 
 
@@ -207,9 +211,7 @@ def test_publish_from_uploaded_creates_object_and_updates_both_items(
 def test_publish_regenerates_from_raw_not_copied_from_private_preview(
     client, aws_backends, signer
 ):
-    sha = _seed(
-        client, signer, aws_backends, data=MARKDOWN_BYTES, filename="notes.md"
-    )
+    sha = _seed(client, signer, aws_backends, data=MARKDOWN_BYTES, filename="notes.md")
 
     # Corrupt the PRIVATE preview artifact. If publish copied from it, the public
     # object would be corrupted too; instead publish must re-render from raw.
@@ -269,9 +271,7 @@ def test_publish_reconciles_metadata_when_object_already_exists(
     # Public object exists but metadata is still 'uploaded' (drift). Publish must
     # reconcile the metadata to published.
     public_key = f"u/{sha}/index.html"
-    aws_backends["s3"].put_object(
-        Bucket=PUBLIC_BUCKET, Key=public_key, Body=HTML_BYTES
-    )
+    aws_backends["s3"].put_object(Bucket=PUBLIC_BUCKET, Key=public_key, Body=HTML_BYTES)
     assert aws_backends["repo"].get_content_item(sha).status.value == "uploaded"
 
     response = _publish(client, signer, sha)

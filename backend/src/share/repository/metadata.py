@@ -121,9 +121,7 @@ def _content_attributes(item: ContentItem) -> dict[str, dict[str, Any]]:
         "raw_key": {"S": item.raw_key},
         "private_artifact_key": {"S": item.private_artifact_key},
         "public_key": (
-            {"S": item.public_key}
-            if item.public_key is not None
-            else {"NULL": True}
+            {"S": item.public_key} if item.public_key is not None else {"NULL": True}
         ),
         "last_upload_id": {"S": item.last_upload_id},
     }

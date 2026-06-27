@@ -153,9 +153,7 @@ class S3ObjectStorage:
 
     def delete_public_object(self, key: str) -> None:
         try:
-            self._client.delete_object(
-                Bucket=self._require_public_bucket(), Key=key
-            )
+            self._client.delete_object(Bucket=self._require_public_bucket(), Key=key)
         except ClientError as exc:
             raise StorageError("Deleting the public object failed.") from exc
 
@@ -178,9 +176,7 @@ class S3ObjectStorage:
 
     def head_size(self, key: str) -> int | None:
         try:
-            response = self._client.head_object(
-                Bucket=self._private_bucket, Key=key
-            )
+            response = self._client.head_object(Bucket=self._private_bucket, Key=key)
         except ClientError as exc:
             if _is_missing(exc):
                 return None
@@ -189,9 +185,7 @@ class S3ObjectStorage:
 
     def get_object(self, key: str) -> bytes | None:
         try:
-            response = self._client.get_object(
-                Bucket=self._private_bucket, Key=key
-            )
+            response = self._client.get_object(Bucket=self._private_bucket, Key=key)
         except ClientError as exc:
             if _is_missing(exc):
                 return None

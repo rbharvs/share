@@ -87,8 +87,14 @@ def client(presign_app) -> TestClient:
     return TestClient(presign_app, raise_server_exceptions=False)
 
 
-def _headers(signer, *, csrf: bool = True, origin: str | None = LOCAL_DASHBOARD_ORIGIN,
-             host: str = LOCAL_DASHBOARD_HOST, token: str | None = "__default__"):
+def _headers(
+    signer,
+    *,
+    csrf: bool = True,
+    origin: str | None = LOCAL_DASHBOARD_ORIGIN,
+    host: str = LOCAL_DASHBOARD_HOST,
+    token: str | None = "__default__",
+):
     headers = {"host": host}
     if token == "__default__":
         token = signer.sign(audience=DASHBOARD_AUDIENCE)

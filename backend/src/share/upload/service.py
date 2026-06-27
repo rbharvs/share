@@ -113,9 +113,7 @@ class UploadService:
             public_host=self._public_host,
         )
 
-    def presign(
-        self, request: PresignRequest, principal: Principal
-    ) -> PresignResponse:
+    def presign(self, request: PresignRequest, principal: Principal) -> PresignResponse:
         """Create a session and return a presigned S3 POST for the upload."""
 
         source_type: SourceType = SourceType.infer(
@@ -206,9 +204,7 @@ class UploadService:
 
         # ... then the rendered private artifact. Title comes from the SESSION's
         # original filename, never the request body.
-        artifact = render(
-            raw, session.source_type, title=session.original_filename
-        )
+        artifact = render(raw, session.source_type, title=session.original_filename)
         artifact_key = self._storage.artifact_key(sha256)
         self._storage.put_object(
             artifact_key, artifact, content_type=_ARTIFACT_CONTENT_TYPE

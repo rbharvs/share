@@ -61,9 +61,7 @@ def test_local_signer_token_accepted_over_real_http():
                 allowed_email=OWNER_EMAIL,
             )
         }
-        verifier = AccessVerifier(
-            configs, CachingJwksProvider(fetch=urllib_fetch)
-        )
+        verifier = AccessVerifier(configs, CachingJwksProvider(fetch=urllib_fetch))
 
         token = signer.sign()  # fresh, Cloudflare-shaped token
         principal = verifier.verify(token, HostKind.DASHBOARD)

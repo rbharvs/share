@@ -102,9 +102,7 @@ def _seed(
 
     storage = aws["storage"]
     artifact_key = storage.artifact_key(sha)
-    storage.put_object(
-        artifact_key, artifact, content_type="text/html; charset=utf-8"
-    )
+    storage.put_object(artifact_key, artifact, content_type="text/html; charset=utf-8")
     published = status is ContentStatus.PUBLISHED
     item = ContentItem(
         sha256=sha,

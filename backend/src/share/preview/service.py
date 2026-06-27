@@ -24,9 +24,7 @@ from share.storage import ObjectStorage
 class PreviewService:
     """Reads the private rendered artifact for an authenticated content GET."""
 
-    def __init__(
-        self, *, storage: ObjectStorage, repo: MetadataRepository
-    ) -> None:
+    def __init__(self, *, storage: ObjectStorage, repo: MetadataRepository) -> None:
         self._storage = storage
         self._repo = repo
 

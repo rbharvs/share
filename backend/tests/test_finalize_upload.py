@@ -112,9 +112,7 @@ def _headers(
 
 
 def _presign(client, signer, **body) -> dict:
-    response = client.post(
-        "/api/uploads/presign", headers=_headers(signer), json=body
-    )
+    response = client.post("/api/uploads/presign", headers=_headers(signer), json=body)
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -134,9 +132,7 @@ def _finalize(client, signer, upload_id: str, **header_kw):
 def _upload_and_finalize(client, signer, aws, *, data: bytes, **body):
     presigned = _presign(client, signer, **body)
     _put_temp(aws, presigned["fields"]["key"], data)
-    return presigned["upload_id"], _finalize(
-        client, signer, presigned["upload_id"]
-    )
+    return presigned["upload_id"], _finalize(client, signer, presigned["upload_id"])
 
 
 def _object_exists(aws, key: str) -> bool:
@@ -148,11 +144,15 @@ def _object_exists(aws, key: str) -> bool:
 
 
 def _list_items(aws) -> list[dict]:
-    return aws["ddb"].Table(TABLE_NAME).query(
-        KeyConditionExpression=boto3.dynamodb.conditions.Key("pk").eq(
-            "USER#default"
-        )
-    )["Items"]
+    return (
+        aws["ddb"]
+        .Table(TABLE_NAME)
+        .query(
+            KeyConditionExpression=boto3.dynamodb.conditions.Key("pk").eq(
+                "USER#default"
+            )
+        )["Items"]
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -212,9 +212,7 @@ def test_finalize_html_creates_immutable_sha_addressed_item(
     assert listing["status"] == "uploaded"
 
 
-def test_finalize_markdown_renders_wrapped_artifact(
-    client, aws_backends, signer
-):
+def test_finalize_markdown_renders_wrapped_artifact(client, aws_backends, signer):
     _, response = _upload_and_finalize(
         client, signer, aws_backends, data=MARKDOWN_BYTES, filename="notes.md"
     )
@@ -229,9 +227,7 @@ def test_finalize_markdown_renders_wrapped_artifact(
         MARKDOWN_BYTES
     )
     # ... while the artifact is the rendered, shell-wrapped HTML document.
-    artifact = aws_backends["storage"].get_object(
-        f"artifacts/{sha}/index.html"
-    )
+    artifact = aws_backends["storage"].get_object(f"artifacts/{sha}/index.html")
     assert artifact is not None and artifact != MARKDOWN_BYTES
     assert artifact.startswith(b"<!doctype html>")
     assert b"<title>notes.md</title>" in artifact
@@ -264,9 +260,7 @@ def test_finalize_dedupes_identical_bytes_to_one_canonical_item(
     assert aws_backends["storage"].get_object(f"tmp/{second_id}") is None
 
 
-def test_dedupe_keys_off_metadata_not_s3_raw_exists(
-    client, aws_backends, signer
-):
+def test_dedupe_keys_off_metadata_not_s3_raw_exists(client, aws_backends, signer):
     # Simulate a crashed prior finalize: raw object present in S3, but NO
     # metadata item. Finalize must NOT falsely dedupe — it must write metadata.
     sha = hashlib.sha256(HTML_BYTES).hexdigest()
@@ -317,9 +311,7 @@ def test_missing_temp_object_rejected(client, signer):
     assert response.json()["error"]["code"] == "upload_not_uploaded"
 
 
-def test_oversize_rejected_by_head_gate_and_temp_survives(
-    client, aws_backends, signer
-):
+def test_oversize_rejected_by_head_gate_and_temp_survives(client, aws_backends, signer):
     presigned = _presign(client, signer, filename="demo.html")
     key = presigned["fields"]["key"]
     _put_temp(aws_backends, key, b"a" * (MAX_UPLOAD_BYTES + 1))

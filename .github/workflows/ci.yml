@@ -1,0 +1,62 @@
+name: CI
+
+# Validation only — deploy stays manual (Pulumi run by the owner). Mirrors the
+# root Makefile so local `make check` / `make test` match CI exactly.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: backend (test / lint / format)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      # `make backend-check` = ruff lint + ruff format --check (read-only).
+      - name: Lint + format check
+        run: make backend-check
+      # `make backend-test` also builds a real Lambda zip and asserts the
+      # vendored arm64 `cryptography` wheel (needs uv on PATH + network).
+      - name: Tests
+        run: make backend-test
+
+  frontend:
+    name: frontend (typecheck / build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+      - name: Typecheck
+        run: make frontend-check
+      - name: Build
+        run: make frontend-build
+
+  infra:
+    name: infra (TS typecheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: infra/package-lock.json
+      - name: Install
+        working-directory: infra
+        run: npm ci
+      - name: Typecheck
+        run: make infra-check

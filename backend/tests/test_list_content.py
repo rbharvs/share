@@ -129,9 +129,7 @@ def _auth_headers(signer):
 
 
 def _list(client, signer, **params):
-    return client.get(
-        "/api/content", headers=_auth_headers(signer), params=params
-    )
+    return client.get("/api/content", headers=_auth_headers(signer), params=params)
 
 
 # --------------------------------------------------------------------------- #
@@ -210,9 +208,7 @@ def test_listing_reads_only_user_default_partition(client, repo, signer):
 # --------------------------------------------------------------------------- #
 
 
-def test_cursor_is_opaque_base64url_of_dynamo_pagination_state(
-    client, repo, signer
-):
+def test_cursor_is_opaque_base64url_of_dynamo_pagination_state(client, repo, signer):
     for i in (1, 2, 3):
         _seed(repo, n=i, created_at=_ts(i))
 
@@ -289,9 +285,7 @@ def test_out_of_range_limit_rejected(client, signer, limit):
 
 
 def test_unauthenticated_listing_rejected(client):
-    response = client.get(
-        "/api/content", headers={"host": LOCAL_DASHBOARD_HOST}
-    )
+    response = client.get("/api/content", headers={"host": LOCAL_DASHBOARD_HOST})
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "auth_required"
 
@@ -301,9 +295,7 @@ def test_listing_not_routable_on_private_host(client, signer):
         "/api/content",
         headers={
             "host": PRIVATE_HOST,
-            "Cf-Access-Jwt-Assertion": signer.sign(
-                audience=DASHBOARD_AUDIENCE
-            ),
+            "Cf-Access-Jwt-Assertion": signer.sign(audience=DASHBOARD_AUDIENCE),
         },
     )
     assert response.status_code == 403

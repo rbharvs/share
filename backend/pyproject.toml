@@ -14,7 +14,11 @@ dependencies = [
     "wenmode==0.7.0",
 ]
 
-[project.optional-dependencies]
+# Dev tooling lives in a PEP 735 dependency group (the non-deprecated successor
+# to ``[tool.uv.dev-dependencies]``). uv installs the ``dev`` group by default
+# for ``uv run`` / ``uv sync``, so ``uv run pytest`` works with no extra flags,
+# while ``uv export --no-dev`` cleanly omits it from the vendored Lambda zip.
+[dependency-groups]
 dev = [
     "pytest>=8.0",
     "httpx>=0.27",

@@ -1,0 +1,17 @@
+{
+  "name": "share-infra",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pulumi TypeScript infrastructure for the share service (AWS + Cloudflare).",
+  "main": "index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pulumi/pulumi": "^3.130.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.3"
+  }
+}

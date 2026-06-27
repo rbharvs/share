@@ -1,0 +1,8 @@
+name: share
+runtime: nodejs
+description: >-
+  Infrastructure for the share personal sharing service (AWS + Cloudflare).
+  Data (DynamoDB + S3) lands in slice 12, compute + CDN (Lambda + API Gateway +
+  CloudFront/OAC + ACM) in slice 13, and Cloudflare DNS/Access + production
+  deploy wiring in slice 14. Lambda consumes the prebuilt zip from `make build`;
+  no build work happens during `pulumi preview`.

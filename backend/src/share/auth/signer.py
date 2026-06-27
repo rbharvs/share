@@ -111,6 +111,4 @@ class LocalAccessSigner:
 
         headers = {"kid": kid if kid is not None else self._kid}
         signing_key = key if key is not None else self._private_key
-        return jwt.encode(
-            claims, signing_key, algorithm=algorithm, headers=headers
-        )
+        return jwt.encode(claims, signing_key, algorithm=algorithm, headers=headers)

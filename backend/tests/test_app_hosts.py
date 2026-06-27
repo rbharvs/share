@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from fastapi.testclient import TestClient
 
 from conftest import DASHBOARD_HOST, PRIVATE_HOST, PUBLIC_HOST
@@ -24,7 +26,15 @@ def test_dashboard_api_ok(client):
 
 
 def test_dashboard_assets_ok(client):
-    r = client.get("/assets/app.js", headers={"host": DASHBOARD_HOST})
+    # Vite emits hash-named assets, so resolve the real asset URL from the served
+    # index.html rather than hard-coding a bare name that never exists once built.
+    index = client.get("/", headers={"host": DASHBOARD_HOST})
+    assert index.status_code == 200
+    match = re.search(r'/assets/[^"\']+', index.text)
+    assert match is not None, "built index.html should reference a hashed asset"
+    asset_url = match.group(0)
+
+    r = client.get(asset_url, headers={"host": DASHBOARD_HOST})
     assert r.status_code == 200
 
 
@@ -117,9 +127,7 @@ def test_prod_app_does_not_classify_dev_host_as_dashboard():
 def test_local_config_repoints_host_boundaries():
     # Swapping the injected config re-points every host boundary through
     # create_app: the dev hosts now classify, and the prod hosts do not.
-    app = TestClient(
-        create_app(Settings.for_local()), raise_server_exceptions=False
-    )
+    app = TestClient(create_app(Settings.for_local()), raise_server_exceptions=False)
 
     r = app.get("/", headers={"host": "share.localhost:5174"})
     assert r.status_code == 200
