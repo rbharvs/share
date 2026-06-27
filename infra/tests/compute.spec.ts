@@ -71,6 +71,12 @@ describe("compute layer", () => {
       publicBucketArn: "arn:aws:s3:::share-public",
       distributionId: DISTRIBUTION_ID,
       distributionArn: `arn:aws:cloudfront::111122223333:distribution/${DISTRIBUTION_ID}`,
+      // AccessConfig mirroring (slice 14): production issuer + per-host AUDs.
+      accessIssuer: "https://myteam.cloudflareaccess.com",
+      accessJwksUrl:
+        "https://myteam.cloudflareaccess.com/cdn-cgi/access/certs",
+      dashboardAudience: "dashboard-aud-tag",
+      privateAudience: "private-aud-tag",
     });
   });
 
@@ -99,6 +105,26 @@ describe("compute layer", () => {
       expect(vars.SHARE_TABLE_NAME).to.equal("share");
       expect(vars.SHARE_PRIVATE_BUCKET).to.equal("share-private");
       expect(vars.SHARE_PUBLIC_BUCKET).to.equal("share-public");
+    });
+
+    it("mirrors the Cloudflare Access issuer + per-host AUDs into the env", async () => {
+      const env = await promiseOf(compute.lambda.environment);
+      const vars = env?.variables ?? {};
+      // These map onto backend Settings.access_issuer / *_audience / jwks_url,
+      // which access_configs() reads per host. The two AUDs stay DISTINCT (the
+      // cross-host replay defense) and the issuer is the real cloudflareaccess
+      // domain — never the localhost dev issuer.
+      expect(vars.SHARE_ACCESS_ISSUER).to.equal(
+        "https://myteam.cloudflareaccess.com",
+      );
+      expect(vars.SHARE_JWKS_URL).to.equal(
+        "https://myteam.cloudflareaccess.com/cdn-cgi/access/certs",
+      );
+      expect(vars.SHARE_DASHBOARD_AUDIENCE).to.equal("dashboard-aud-tag");
+      expect(vars.SHARE_PRIVATE_AUDIENCE).to.equal("private-aud-tag");
+      expect(vars.SHARE_DASHBOARD_AUDIENCE).to.not.equal(
+        vars.SHARE_PRIVATE_AUDIENCE,
+      );
     });
 
     it("retains the Lambda log group for 30 days", async () => {

@@ -128,3 +128,83 @@ export function loadEdgeConfig(): EdgeConfig {
       cfg.getNumber("logRetentionDays") ?? EDGE_DEFAULTS.logRetentionDays,
   };
 }
+
+// --- Cloudflare (DNS + Access) configuration -------------------------------
+
+/**
+ * Resolved configuration for the Cloudflare layer: the DNS records that point
+ * the three hosts at AWS, and the two Zero Trust Access applications that gate
+ * the private hosts.
+ *
+ * Two zones are involved because the hosts live on two apex domains:
+ * `share.example.com` (zone `example.com`) and the two
+ * `*.usercontent.example` hosts (zone `usercontent.example`). The account/zone ids
+ * are real Cloudflare identifiers with no meaningful default — they MUST be set
+ * per stack (`pulumi config set share:cloudflareAccountId …`, etc.); the empty
+ * defaults only let `pulumi preview`/typecheck run before a stack is configured.
+ *
+ * `allowedOwnerEmail` is plain config, NOT a secret (PRD): the SHA URLs are not
+ * secrets and the owner allowlist is just an email. The Access AUD tags, by
+ * contrast, originate in Cloudflare and are the per-host cross-host replay
+ * defense — they are surfaced as resource outputs (never hand-copied) and
+ * mirrored into the Lambda env so the verifier and Cloudflare cannot drift.
+ */
+export interface CloudflareConfig {
+  /** Cloudflare account id that owns the Access apps/policies. */
+  readonly accountId: string;
+  /** Zone id for `example.com` (the dashboard host's apex). */
+  readonly dashboardZoneId: string;
+  /** Zone id for `usercontent.example` (the private + public hosts' apex). */
+  readonly contentZoneId: string;
+  /** Dashboard + mutation-API host (proxied DNS). Mirrors `EdgeConfig`. */
+  readonly dashboardHost: string;
+  /** Authenticated private content host (proxied DNS). Mirrors `EdgeConfig`. */
+  readonly privateHost: string;
+  /** Unauthenticated public content host (DNS-only to CloudFront). */
+  readonly publicHost: string;
+  /** Owner allowlist email for both Access policies (plain config, not secret). */
+  readonly allowedOwnerEmail: string;
+  /** Cloudflare Access team domain slug → issuer `https://<slug>.cloudflareaccess.com`. */
+  readonly teamDomain: string;
+  /** Access session duration (PRD: 7 days → Cloudflare `"168h"`). */
+  readonly sessionDuration: string;
+}
+
+/** Defaults mirroring the backend settings provider + PRD Access contract. */
+export const CLOUDFLARE_DEFAULTS = {
+  accountId: "",
+  dashboardZoneId: "",
+  contentZoneId: "",
+  dashboardHost: EDGE_DEFAULTS.dashboardHost,
+  privateHost: EDGE_DEFAULTS.privateHost,
+  publicHost: EDGE_DEFAULTS.publicHost,
+  // Mirrors backend `Settings.allowed_owner_email` (the single allowlist).
+  allowedOwnerEmail: "owner@example.com",
+  teamDomain: "myteam",
+  // 7-day session (PRD). Cloudflare accepts a fixed duration enum; "168h" = 7d.
+  sessionDuration: "168h",
+} as const;
+
+/** Build the {@link CloudflareConfig} from Pulumi stack config + defaults. */
+export function loadCloudflareConfig(): CloudflareConfig {
+  const cfg = new pulumi.Config("share");
+
+  return {
+    accountId: cfg.get("cloudflareAccountId") ?? CLOUDFLARE_DEFAULTS.accountId,
+    dashboardZoneId:
+      cfg.get("dashboardZoneId") ??
+      CLOUDFLARE_DEFAULTS.dashboardZoneId,
+    contentZoneId:
+      cfg.get("contentZoneId") ??
+      CLOUDFLARE_DEFAULTS.contentZoneId,
+    dashboardHost: cfg.get("dashboardHost") ?? CLOUDFLARE_DEFAULTS.dashboardHost,
+    privateHost: cfg.get("privateHost") ?? CLOUDFLARE_DEFAULTS.privateHost,
+    publicHost: cfg.get("publicHost") ?? CLOUDFLARE_DEFAULTS.publicHost,
+    allowedOwnerEmail:
+      cfg.get("allowedOwnerEmail") ?? CLOUDFLARE_DEFAULTS.allowedOwnerEmail,
+    teamDomain:
+      cfg.get("cloudflareTeamDomain") ?? CLOUDFLARE_DEFAULTS.teamDomain,
+    sessionDuration:
+      cfg.get("accessSessionDuration") ?? CLOUDFLARE_DEFAULTS.sessionDuration,
+  };
+}

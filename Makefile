@@ -22,10 +22,11 @@ LAMBDA_ZIP := $(BACKEND)/dist/lambda.zip
 
 .PHONY: help test check format fix dev preview build \
         backend-test backend-check backend-format backend-fix \
-        frontend-check frontend-build infra-check infra-test
+        frontend-check frontend-build infra-check infra-test \
+        infra-preview deploy boundary-checks
 
 help:
-	@echo "Targets: test | check | format | fix | dev | preview | build"
+	@echo "Targets: test | check | format | fix | dev | preview | build | deploy"
 
 # --- Aggregate targets ---
 
@@ -95,6 +96,31 @@ infra-test:
 	@if [ -f $(INFRA)/package.json ]; then \
 		cd $(INFRA) && npm test; \
 	else echo "infra not scaffolded yet (slices 12-14)"; fi
+
+# Operator-only preview of the real create/update diff. Needs the `share-deploy`
+# AWS profile, the Cloudflare token, and the prebuilt $(LAMBDA_ZIP). NEVER run
+# in CI — deploy stays manual (see `deploy`).
+infra-preview: build
+	cd $(INFRA) && pulumi preview
+
+# --- Deploy (manual, slice 14) ---
+
+# The single gated production deploy. Runs the full test suite and builds the
+# Lambda zip FIRST, then hands off to the interactive `pulumi up` (its built-in
+# yes/no prompt IS the manual gate). There is intentionally NO automated CI
+# deploy: CI only validates (see .github/workflows/ci.yml).
+#
+# After it applies, run `make boundary-checks` to exercise the deployed ingress
+# boundaries (Access 200, raw API Gateway 403, public-host-to-Lambda 403, and
+# both /u/{sha} URL shapes), and mirror any rotated Access AUDs are already wired
+# (they flow from Cloudflare into the Lambda env via the same `pulumi up`).
+deploy: test build ## Manual production deploy: tests + build, then gated `pulumi up`
+	cd $(INFRA) && pulumi up
+
+# Post-deploy boundary curls (story 42). Reads hosts from the environment or the
+# checked-in defaults; see scripts/boundary_checks.sh for the exact assertions.
+boundary-checks:
+	./scripts/boundary_checks.sh
 
 # --- Packaging (slice 11) ---
 

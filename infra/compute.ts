@@ -55,6 +55,14 @@ export interface ComputeInputs {
   readonly publicBucketArn: pulumi.Input<string>;
   readonly distributionId: pulumi.Input<string>;
   readonly distributionArn: pulumi.Input<string>;
+  // --- Access verification mirroring (slice 14) ----------------------------
+  // The production Cloudflare Access issuer + per-host AUD tags, fed straight
+  // from the Cloudflare resources so the backend verifier (slice 02) can never
+  // drift from the live apps. The LOCAL issuer/audiences are never set here.
+  readonly accessIssuer: pulumi.Input<string>;
+  readonly accessJwksUrl: pulumi.Input<string>;
+  readonly dashboardAudience: pulumi.Input<string>;
+  readonly privateAudience: pulumi.Input<string>;
 }
 
 export interface ComputeResources {
@@ -115,6 +123,13 @@ function lambdaEnvironment(
     SHARE_PRIVATE_BUCKET: inputs.privateBucket,
     SHARE_PUBLIC_BUCKET: inputs.publicBucket,
     SHARE_CLOUDFRONT_DISTRIBUTION_ID: inputs.distributionId,
+    // Access verification config mirrored from the Cloudflare apps (slice 14).
+    // These map onto backend `Settings.access_issuer` / `dashboard_audience` /
+    // `private_audience` / `jwks_url`, which `access_configs()` reads per host.
+    SHARE_ACCESS_ISSUER: inputs.accessIssuer,
+    SHARE_JWKS_URL: inputs.accessJwksUrl,
+    SHARE_DASHBOARD_AUDIENCE: inputs.dashboardAudience,
+    SHARE_PRIVATE_AUDIENCE: inputs.privateAudience,
   };
 }
 
