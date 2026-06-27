@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from share.auth import Principal, require_principal
 from share.content import ContentItemResponse, private_rendered_headers
@@ -28,6 +29,7 @@ from share.listing import (
 from share.preview import PreviewServiceDep
 from share.publish import PublishServiceDep
 from share.security import require_csrf
+from share.static_site import StaticSite
 from share.upload import (
     FinalizeRequest,
     PresignRequest,
@@ -49,11 +51,23 @@ def _host_kind(request: Request) -> HostKind:
     return getattr(request.state, "host_kind", HostKind.UNKNOWN)
 
 
+def _static_site(request: Request) -> StaticSite:
+    return request.app.state.static_site
+
+
 @router.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
-async def root(request: Request):
+async def root(request: Request) -> Response:
+    """Serve the host's landing document.
+
+    On the private content host this is the minimal private root page. On the
+    dashboard host it is the built SPA's ``index.html`` (or a placeholder shell
+    before a build exists). The host gate has already blocked the public/unknown
+    hosts, so only these two kinds reach here.
+    """
+
     if _host_kind(request) is HostKind.PRIVATE_CONTENT:
         return HTMLResponse("<!doctype html><title>private content host</title>")
-    return HTMLResponse("<!doctype html><title>share dashboard</title>")
+    return _static_site(request).index_response()
 
 
 @router.get("/robots.txt", include_in_schema=False)
@@ -62,8 +76,20 @@ async def robots() -> PlainTextResponse:
 
 
 @router.get("/assets/{path:path}", include_in_schema=False)
-async def assets(path: str) -> PlainTextResponse:
-    # Placeholder until built Vite assets are mounted (slice 09).
+async def assets(path: str, request: Request) -> Response:
+    """Serve a built Vite asset.
+
+    Registered before the SPA fallback so concrete assets always win over the
+    history fallback. Before any build exists the bundle is absent, so a
+    placeholder body keeps the route demoable; once built, a missing asset is a
+    genuine ``route_not_allowed``.
+    """
+
+    response = _static_site(request).asset_response(path)
+    if response is not None:
+        return response
+    if _static_site(request).built:
+        raise StarletteHTTPException(status_code=404)
     return PlainTextResponse(f"asset:{path}")
 
 

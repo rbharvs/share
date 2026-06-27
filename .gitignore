@@ -19,7 +19,9 @@ node_modules/
 frontend/dist/
 *.tsbuildinfo
 
-# Backend bundled frontend assets + Lambda zip
+# Backend bundled frontend assets + Lambda zip (copied from frontend/dist at
+# build; the path is anchored to the backend workspace, not just the repo root).
+backend/src/share/static/
 src/share/static/
 *.zip
 

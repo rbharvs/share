@@ -13,7 +13,9 @@ Wires the request spine together:
 
 from __future__ import annotations
 
-from fastapi import FastAPI, Request
+from pathlib import Path
+
+from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -28,6 +30,7 @@ from share.errors import (
 )
 from share.hosts import HostKind
 from share.middleware import HostGateMiddleware, RequestContextMiddleware
+from share.static_site import BUNDLED_STATIC_DIR, StaticSite
 
 from .routes import router
 
@@ -37,6 +40,34 @@ _ROUTE_STATUSES = frozenset({404, 405})
 
 def _request_id(request: Request) -> str | None:
     return getattr(request.state, "request_id", None)
+
+
+def _maybe_spa_fallback(request: Request) -> Response | None:
+    """HTML5-history SPA fallback for unmatched dashboard GETs.
+
+    Runs only after routing has found no concrete match (a real 404), so every
+    registered route — the whole API surface, ``/assets/*``, ``/robots.txt``,
+    ``/u/{sha}`` — takes precedence naturally; the SPA is the last resort, never
+    a route that shadows API paths. Restricted to GET on the dashboard host
+    (``host_kind`` set by the gate), and ``/api/*`` / ``/assets/*`` are excluded
+    so an API typo or a missing built asset stays ``route_not_allowed`` rather
+    than silently returning the shell. Other hosts never reach here: the gate
+    rejects the public/unknown hosts and confines the private host to its three
+    allowed paths before routing.
+    """
+
+    if request.method != "GET":
+        return None
+    if getattr(request.state, "host_kind", None) is not HostKind.DASHBOARD:
+        return None
+    path = request.url.path
+    if path.startswith("/api/") or path.startswith("/assets/"):
+        return None
+    site = getattr(request.app.state, "static_site", None)
+    if site is None:
+        return None
+    root_file = site.root_file_response(path.lstrip("/"))
+    return root_file if root_file is not None else site.index_response()
 
 
 def _install_exception_handlers(app: FastAPI) -> None:
@@ -51,7 +82,13 @@ def _install_exception_handlers(app: FastAPI) -> None:
         return error_response(ValidationError(), _request_id(request))
 
     @app.exception_handler(StarletteHTTPException)
-    async def _http(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    async def _http(request: Request, exc: StarletteHTTPException) -> Response:
+        # An unmatched dashboard GET is HTML5-history SPA navigation: serve the
+        # shell instead of an error, but only after every concrete route missed.
+        if exc.status_code == 404:
+            spa = _maybe_spa_fallback(request)
+            if spa is not None:
+                return spa
         # Unknown paths (404) and unsupported methods (405) — including the
         # deliberately-absent DELETE — surface as the same stable code.
         if exc.status_code in _ROUTE_STATUSES:
@@ -65,9 +102,15 @@ def create_app(
     settings: Settings | None = None,
     *,
     host_kinds: dict[str, HostKind] | None = None,
+    static_dir: Path | None = None,
 ) -> FastAPI:
     """Build the ASGI app. The same instance backs TestClient, uvicorn, and the
-    Mangum handler."""
+    Mangum handler.
+
+    ``static_dir`` points at the built dashboard SPA bundle; it defaults to the
+    package-bundled location populated by the build. Tests inject a temp bundle
+    here to exercise the real SPA/asset/fallback serving without a frontend build.
+    """
 
     settings = settings or get_settings()
 
@@ -85,6 +128,12 @@ def create_app(
         openapi_url=None,
     )
     app.state.settings = settings
+
+    # The dashboard SPA bundle (built assets + history fallback). App-scoped so
+    # tests can point it at a temp bundle; defaults to the package-bundled dir
+    # the build copies ``frontend/dist`` into. Served only on the dashboard host
+    # (the host gate blocks the content hosts before routing).
+    app.state.static_site = StaticSite(static_dir or BUNDLED_STATIC_DIR)
 
     # The Access verifier is app-scoped but shares the module-level JWKS cache so
     # one fetch per cold start is reused across warm invocations. Routes reach it
