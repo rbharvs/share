@@ -51,14 +51,18 @@ def test_private_root_ok(client):
     assert "private content host" in r.text
 
 
-def test_private_content_get_ok(client):
+def test_private_content_get_requires_auth(client):
+    # /u/{sha} is now an auth-gated content read: the gate routes it on the
+    # private host (not host/route rejected), but a request without a valid
+    # private-audience token is rejected with auth_required.
     r = client.get("/u/abc123", headers={"host": PRIVATE_HOST})
-    assert r.status_code == 200
+    assert r.status_code == 401
+    assert r.json()["error"]["code"] == "auth_required"
 
 
-def test_private_content_head_ok(client):
+def test_private_content_head_requires_auth(client):
     r = client.head("/u/abc123", headers={"host": PRIVATE_HOST})
-    assert r.status_code == 200
+    assert r.status_code == 401
     assert r.content == b""
 
 
@@ -122,7 +126,10 @@ def test_local_config_repoints_host_boundaries():
     assert "dashboard" in r.text
 
     r = app.get("/u/abc", headers={"host": "private.localhost:5175"})
-    assert r.status_code == 200
+    # Routed on the now-classified private host, then auth-gated (no longer
+    # host_not_allowed) — proving the boundary re-pointed through create_app.
+    assert r.status_code == 401
+    assert r.json()["error"]["code"] == "auth_required"
 
     # Prod hosts are not co-deployed with the local mapping.
     r = app.get("/", headers={"host": DASHBOARD_HOST})

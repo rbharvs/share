@@ -13,11 +13,11 @@ routing.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from share.auth import Principal, require_principal
-from share.content import ContentItemResponse
+from share.content import ContentItemResponse, private_rendered_headers
 from share.hosts import HostKind
 from share.listing import (
     DEFAULT_LIST_LIMIT,
@@ -25,6 +25,7 @@ from share.listing import (
     ContentListResponse,
     ContentServiceDep,
 )
+from share.preview import PreviewServiceDep
 from share.security import require_csrf
 from share.upload import (
     FinalizeRequest,
@@ -37,6 +38,10 @@ router = APIRouter()
 
 #: Authenticates the request against the dashboard Access app (slice 02).
 _dashboard_principal = require_principal(HostKind.DASHBOARD)
+
+#: Authenticates the request against the private-content Access app (slice 02).
+#: A dashboard-audience token is rejected here because the audience differs.
+_private_principal = require_principal(HostKind.PRIVATE_CONTENT)
 
 
 def _host_kind(request: Request) -> HostKind:
@@ -119,6 +124,28 @@ async def list_content(
 
 
 @router.api_route("/u/{sha}", methods=["GET", "HEAD"], include_in_schema=False)
-async def private_content(sha: str) -> HTMLResponse:
-    # Placeholder until the renderer + storage land (slices 03/05/07).
-    return HTMLResponse(f"<!doctype html><title>content {sha}</title>")
+async def private_content(
+    sha: str,
+    request: Request,
+    service: PreviewServiceDep,
+    principal: Principal = Depends(_private_principal),
+) -> Response:
+    """Serve the authenticated private rendered artifact for ``sha``.
+
+    Reached only on the private content host (the gate rejects ``/u/{sha}`` on
+    the dashboard and never routes it on public). ``_private_principal`` requires
+    a valid private-audience Access token, so a dashboard-audience token is
+    rejected here. The artifact is wrapped in the CSP-sandbox header set (no
+    ``allow-same-origin``) that isolates the arbitrary uploaded JS from the
+    dashboard origin; a missing SHA surfaces as ``content_not_found``.
+
+    ``HEAD`` returns the identical headers (including the real ``Content-Length``)
+    with no body, resolving the size via an S3 ``HEAD`` so the artifact bytes are
+    never read.
+    """
+
+    headers = private_rendered_headers()
+    if request.method == "HEAD":
+        headers["Content-Length"] = str(service.head_artifact(sha))
+        return Response(status_code=200, headers=headers)
+    return Response(content=service.get_artifact(sha), headers=headers)
