@@ -13,12 +13,18 @@ routing.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from share.auth import Principal, require_principal
 from share.content import ContentItemResponse
 from share.hosts import HostKind
+from share.listing import (
+    DEFAULT_LIST_LIMIT,
+    MAX_LIST_LIMIT,
+    ContentListResponse,
+    ContentServiceDep,
+)
 from share.security import require_csrf
 from share.upload import (
     FinalizeRequest,
@@ -92,6 +98,24 @@ async def finalize_upload(
     """
 
     return service.finalize(body, principal)
+
+
+@router.get("/api/content", response_model=ContentListResponse)
+async def list_content(
+    service: ContentServiceDep,
+    limit: int = Query(DEFAULT_LIST_LIMIT, ge=1, le=MAX_LIST_LIMIT),
+    cursor: str | None = Query(None),
+    principal: Principal = Depends(_dashboard_principal),
+) -> ContentListResponse:
+    """List content newest-first with opaque-cursor pagination.
+
+    Reached only on the dashboard host (the gate rejects it elsewhere) and only
+    for the authenticated owner. A read-only GET, so no CSRF/Origin check; the
+    ``principal`` gate is the authorization. ``limit`` defaults to 50 (capped at
+    100); ``cursor`` resumes a prior page without scanning.
+    """
+
+    return service.list_content(limit=limit, cursor=cursor)
 
 
 @router.api_route("/u/{sha}", methods=["GET", "HEAD"], include_in_schema=False)

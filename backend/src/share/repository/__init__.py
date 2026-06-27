@@ -3,6 +3,7 @@
 from .metadata import (
     META_SK,
     USER_LIST_PK,
+    ContentPage,
     DynamoMetadataRepository,
     MetadataRepository,
 )
@@ -10,6 +11,7 @@ from .metadata import (
 __all__ = [
     "META_SK",
     "USER_LIST_PK",
+    "ContentPage",
     "DynamoMetadataRepository",
     "MetadataRepository",
 ]

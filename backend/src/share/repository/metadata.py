@@ -22,19 +22,40 @@ The repository is injected through the DI chain so tests substitute a moto-backe
 
 from __future__ import annotations
 
-from typing import Any, Protocol, runtime_checkable
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
+from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
 from share.content import ContentItem, ContentStatus, SourceType
 from share.errors import StorageError
-from share.upload.models import UploadSession
+
+if TYPE_CHECKING:
+    # Imported lazily inside ``get_upload_session`` at runtime: a module-level
+    # import would re-enter the upload package (``upload.dependencies`` depends
+    # back on this repository) and form a circular import whenever this module
+    # is initialized before ``share.upload``.
+    from share.upload.models import UploadSession
 
 #: Sort-key value for "the" item of a single-partition entity.
 META_SK = "META"
 
 #: Single-workspace partition for the newest-first content list.
 USER_LIST_PK = "USER#default"
+
+
+@dataclass(frozen=True)
+class ContentPage:
+    """One page of the newest-first content listing.
+
+    ``last_evaluated_key`` is DynamoDB's opaque pagination token (or ``None`` on
+    the final page). The listing service wraps it in the base64url cursor; the
+    repository stays agnostic about how the token is transported.
+    """
+
+    items: list[ContentItem]
+    last_evaluated_key: dict[str, Any] | None
 
 
 def _session_pk(upload_id: str) -> str:
@@ -47,6 +68,32 @@ def _content_pk(sha256: str) -> str:
 
 def _list_sk(created_at: str, sha256: str) -> str:
     return f"CONTENT#{created_at}#{sha256}"
+
+
+def _to_content_item(attrs: dict[str, Any]) -> ContentItem:
+    """Project a stored metadata block (resource-deserialized) into the domain.
+
+    Shared by the single-item lookup and the list query: both the
+    ``CONTENT#{sha}/META`` lookup item and the ``USER#default`` list item carry
+    the identical attribute block (see :func:`_content_attributes`).
+    """
+
+    return ContentItem(
+        sha256=attrs["sha256"],
+        source_type=SourceType.parse(attrs["source_type"]),
+        original_filename=attrs["original_filename"],
+        # "N" write -> resource Decimal read -> Pydantic int coerce.
+        size_bytes=attrs["size_bytes"],
+        status=ContentStatus.parse(attrs["status"]),
+        created_at=attrs["created_at"],
+        updated_at=attrs["updated_at"],
+        published_at=attrs.get("published_at"),
+        created_by=attrs["created_by"],
+        raw_key=attrs["raw_key"],
+        private_artifact_key=attrs["private_artifact_key"],
+        public_key=attrs.get("public_key"),
+        last_upload_id=attrs["last_upload_id"],
+    )
 
 
 def _content_attributes(item: ContentItem) -> dict[str, dict[str, Any]]:
@@ -108,6 +155,16 @@ class MetadataRepository(Protocol):
         are written via a single ``TransactWriteItems`` so they can never drift.
         """
 
+    def list_content(
+        self, *, limit: int, start_key: dict[str, Any] | None = None
+    ) -> ContentPage:
+        """Read one newest-first page of the ``USER#default`` content list.
+
+        Queries (never scans) the single content partition in descending sort-key
+        order, capped at ``limit``. ``start_key`` resumes from a prior page's
+        ``LastEvaluatedKey`` so pagination never re-reads earlier items.
+        """
+
 
 class DynamoMetadataRepository:
     """boto3-backed :class:`MetadataRepository`."""
@@ -146,6 +203,10 @@ class DynamoMetadataRepository:
             raise StorageError("Writing the upload session failed.") from exc
 
     def get_upload_session(self, upload_id: str) -> UploadSession | None:
+        # Lazy import breaks the repository<->upload module-level cycle (see the
+        # TYPE_CHECKING note above); by call time both packages are initialized.
+        from share.upload.models import UploadSession
+
         try:
             response = self._table.get_item(
                 Key={"pk": _session_pk(upload_id), "sk": META_SK}
@@ -182,21 +243,28 @@ class DynamoMetadataRepository:
         if not item:
             return None
 
-        return ContentItem(
-            sha256=item["sha256"],
-            source_type=SourceType.parse(item["source_type"]),
-            original_filename=item["original_filename"],
-            # "N" write -> resource Decimal read -> Pydantic int coerce.
-            size_bytes=item["size_bytes"],
-            status=ContentStatus.parse(item["status"]),
-            created_at=item["created_at"],
-            updated_at=item["updated_at"],
-            published_at=item.get("published_at"),
-            created_by=item["created_by"],
-            raw_key=item["raw_key"],
-            private_artifact_key=item["private_artifact_key"],
-            public_key=item.get("public_key"),
-            last_upload_id=item["last_upload_id"],
+        return _to_content_item(item)
+
+    def list_content(
+        self, *, limit: int, start_key: dict[str, Any] | None = None
+    ) -> ContentPage:
+        query: dict[str, Any] = {
+            # Read only the USER#default partition — never a Scan.
+            "KeyConditionExpression": Key("pk").eq(USER_LIST_PK),
+            # Sort key is CONTENT#{created_at}#{sha}; descending == newest-first.
+            "ScanIndexForward": False,
+            "Limit": limit,
+        }
+        if start_key is not None:
+            query["ExclusiveStartKey"] = start_key
+        try:
+            response = self._table.query(**query)
+        except ClientError as exc:
+            raise StorageError("Listing content failed.") from exc
+
+        items = [_to_content_item(attrs) for attrs in response.get("Items", [])]
+        return ContentPage(
+            items=items, last_evaluated_key=response.get("LastEvaluatedKey")
         )
 
     def put_content_item(self, item: ContentItem) -> None:
