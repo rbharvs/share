@@ -17,9 +17,15 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from share.auth import Principal, require_principal
+from share.content import ContentItemResponse
 from share.hosts import HostKind
 from share.security import require_csrf
-from share.upload import PresignRequest, PresignResponse, UploadServiceDep
+from share.upload import (
+    FinalizeRequest,
+    PresignRequest,
+    PresignResponse,
+    UploadServiceDep,
+)
 
 router = APIRouter()
 
@@ -69,6 +75,23 @@ async def presign_upload(
     """
 
     return service.presign(body, principal)
+
+
+@router.post("/api/uploads/finalize", response_model=ContentItemResponse)
+async def finalize_upload(
+    body: FinalizeRequest,
+    service: UploadServiceDep,
+    principal: Principal = Depends(_dashboard_principal),
+    _csrf: None = Depends(require_csrf),
+) -> ContentItemResponse:
+    """Finalize a completed upload into an immutable content item.
+
+    Reached only on the dashboard host (the gate rejects it elsewhere). Filename
+    and source type come from the stored session, not ``body``; ``require_csrf``
+    enforces the CSRF header + dashboard Origin before any state change.
+    """
+
+    return service.finalize(body, principal)
 
 
 @router.api_route("/u/{sha}", methods=["GET", "HEAD"], include_in_schema=False)

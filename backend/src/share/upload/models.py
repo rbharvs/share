@@ -28,6 +28,19 @@ class PresignRequest(BaseModel):
     title: str | None = None
 
 
+class FinalizeRequest(BaseModel):
+    """Dashboard finalize request body.
+
+    Deliberately carries *only* the ``upload_id``: filename, source type, and
+    title are read from the stored upload session, never re-asserted here
+    (``extra="forbid"`` rejects any attempt to smuggle them in).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    upload_id: str = Field(min_length=1)
+
+
 class PresignResponse(BaseModel):
     """Dashboard presign response.
 

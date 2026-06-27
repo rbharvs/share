@@ -18,9 +18,9 @@ from functools import lru_cache
 from typing import Annotated
 
 import boto3
-from fastapi import Depends
+from fastapi import Depends, Request
 
-from share.config import get_settings
+from share.config import Settings, get_settings
 from share.repository import DynamoMetadataRepository, MetadataRepository
 from share.storage import ObjectStorage, S3ObjectStorage
 
@@ -50,13 +50,32 @@ def get_repo() -> MetadataRepository:
     )
 
 
+def get_app_settings(request: Request) -> Settings:
+    """The per-app :class:`Settings` (prod vs. local are swapped wholesale).
+
+    Read off ``app.state`` — the same DI seam the verifier and CSRF guard use —
+    so the content hosts in finalize URLs match the app the request hit, not the
+    bare ``@lru_cache`` production default.
+    """
+
+    state = getattr(request.app, "state", None)
+    settings = getattr(state, "settings", None) if state is not None else None
+    return settings or get_settings()
+
+
 def get_upload_service(
     storage: ObjectStorage = Depends(get_storage),
     repo: MetadataRepository = Depends(get_repo),
+    settings: Settings = Depends(get_app_settings),
 ) -> UploadService:
     """Compose the upload service from the storage + repository seams."""
 
-    return UploadService(storage=storage, repo=repo)
+    return UploadService(
+        storage=storage,
+        repo=repo,
+        private_host=settings.private_host,
+        public_host=settings.public_host,
+    )
 
 
 #: Route-facing alias. Routes depend on this, never on storage/repo directly.
