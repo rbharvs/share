@@ -1,5 +1,5 @@
 import { ExternalLink, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 
 import { ErrorState } from "@/components/ErrorState";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -19,11 +19,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fetchContent } from "@/lib/api";
+import { useToast } from "@/components/ui/toast";
+import { ApiError, publishContent, unpublishContent } from "@/lib/api";
 import type { ContentItem } from "@/lib/types";
 import { formatBytes, formatTimestamp } from "@/lib/utils";
-
-type LoadState = "idle" | "loading" | "loading-more" | "error" | "ready";
+import type { Library } from "@/hooks/useLibrary";
 
 /** A private/public content link, or an em dash when the link is absent. */
 function ContentLink({
@@ -50,36 +50,79 @@ function ContentLink({
 }
 
 /**
+ * The per-item publish / unpublish control.
+ *
+ * Calls the slice-08 idempotent APIs and replaces the item in place with the
+ * returned content item, so status + public link update without a refetch. The
+ * button is disabled while a request is in flight, which (together with the
+ * backend's idempotency) makes a double-click a no-op.
+ */
+function PublishActions({
+  item,
+  onChanged,
+}: {
+  item: ContentItem;
+  onChanged: (item: ContentItem) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const { toast } = useToast();
+  const published = item.status === "published";
+
+  const mutate = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const updated = published
+        ? await unpublishContent(item.sha256)
+        : await publishContent(item.sha256);
+      onChanged(updated);
+      toast({
+        variant: "success",
+        title: published
+          ? `Unpublished ${updated.original_filename}`
+          : `Published ${updated.original_filename}`,
+        description: published
+          ? "The public link has been removed."
+          : "The public link is live.",
+      });
+    } catch (err) {
+      const apiError = err instanceof ApiError ? err : null;
+      toast({
+        variant: "error",
+        title: published ? "Unpublish failed" : "Publish failed",
+        description:
+          apiError?.message ??
+          (err instanceof Error ? err.message : "Something went wrong."),
+        code: apiError?.code,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Button
+      variant={published ? "outline" : "default"}
+      size="sm"
+      disabled={busy}
+      onClick={() => void mutate()}
+    >
+      {busy && <Loader2 className="h-3 w-3 animate-spin" aria-hidden />}
+      {published ? "Unpublish" : "Publish"}
+    </Button>
+  );
+}
+
+/**
  * The newest-first content library — the dashboard's first real view.
  *
- * Loads `GET /api/content` on mount (no polling, per the PRD), renders each item
- * with filename / type / size / status / timestamps, the always-present private
- * link, and the public link only when published. Cursor pagination drives an
- * explicit "Load more". Structured API errors are surfaced verbatim.
+ * Renders each item with filename / type / size / status / timestamps, the
+ * always-present private link, the public link only when published, and a
+ * publish/unpublish action. The list itself is owned by {@link Library} so
+ * uploads prepend and mutations replace one shared source of truth (no polling).
  */
-export function ContentLibrary() {
-  const [items, setItems] = useState<ContentItem[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [state, setState] = useState<LoadState>("idle");
-  const [error, setError] = useState<unknown>(null);
-
-  const load = useCallback(async (nextCursor: string | null) => {
-    setState(nextCursor ? "loading-more" : "loading");
-    setError(null);
-    try {
-      const page = await fetchContent(nextCursor);
-      setItems((prev) => (nextCursor ? [...prev, ...page.items] : page.items));
-      setCursor(page.next_cursor);
-      setState("ready");
-    } catch (err) {
-      setError(err);
-      setState("error");
-    }
-  }, []);
-
-  useEffect(() => {
-    void load(null);
-  }, [load]);
+export function ContentLibrary({ library }: { library: Library }) {
+  const { items, cursor, state, error, load, replace } = library;
 
   return (
     <Card>
@@ -113,16 +156,14 @@ export function ContentLibrary() {
                 <TableHead>Updated</TableHead>
                 <TableHead>Private link</TableHead>
                 <TableHead>Public link</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.sha256}>
                   <TableCell>
-                    <span
-                      className="font-medium"
-                      title={item.sha256}
-                    >
+                    <span className="font-medium" title={item.sha256}>
                       {item.original_filename}
                     </span>
                     <div className="font-mono text-xs text-slate-400">
@@ -149,6 +190,9 @@ export function ContentLibrary() {
                   </TableCell>
                   <TableCell>
                     <ContentLink href={item.public_url} label="Public" />
+                  </TableCell>
+                  <TableCell>
+                    <PublishActions item={item} onChanged={replace} />
                   </TableCell>
                 </TableRow>
               ))}
