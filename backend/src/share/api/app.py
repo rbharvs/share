@@ -18,6 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from share.auth import AccessVerifier, access_configs, caching_jwks_provider
 from share.config import Settings, get_settings
 from share.errors import (
     RouteNotAllowedError,
@@ -84,6 +85,13 @@ def create_app(
         openapi_url=None,
     )
     app.state.settings = settings
+
+    # The Access verifier is app-scoped but shares the module-level JWKS cache so
+    # one fetch per cold start is reused across warm invocations. Routes reach it
+    # through the `require_principal` dependency (slice 02); tests override it.
+    app.state.access_verifier = AccessVerifier(
+        access_configs(settings), caching_jwks_provider
+    )
 
     app.include_router(router)
     _install_exception_handlers(app)
