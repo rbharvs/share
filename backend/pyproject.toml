@@ -10,6 +10,7 @@ dependencies = [
     "pydantic>=2.6",
     "pydantic-settings>=2.2",
     "pyjwt[crypto]>=2.8",
+    "wenmode==0.7.0",
 ]
 
 [project.optional-dependencies]
@@ -18,6 +19,7 @@ dev = [
     "httpx>=0.27",
     "uvicorn>=0.29",
     "ruff>=0.6",
+    "syrupy>=5.3.4",
 ]
 
 [build-system]
