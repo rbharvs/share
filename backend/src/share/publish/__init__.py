@@ -5,10 +5,16 @@ from .dependencies import (
     get_invalidator,
     get_publish_service,
 )
-from .invalidator import Invalidator, NullInvalidator, RecordingInvalidator
+from .invalidator import (
+    CloudFrontInvalidator,
+    Invalidator,
+    NullInvalidator,
+    RecordingInvalidator,
+)
 from .service import PublishService, invalidation_paths
 
 __all__ = [
+    "CloudFrontInvalidator",
     "Invalidator",
     "NullInvalidator",
     "PublishService",

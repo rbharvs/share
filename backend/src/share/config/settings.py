@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     private_bucket: str = "share-private"
     public_bucket: str = "share-public"
 
+    # CloudFront distribution serving the public host. Populated by the slice-13
+    # infra apply; when empty the publish vertical falls back to the no-op
+    # invalidator (the public bucket write/delete still happens, only the edge
+    # purge is skipped).
+    cloudfront_distribution_id: str = ""
+
     def host_kinds(self) -> dict[str, HostKind]:
         """Build the host registry mapping from configured hosts.
 

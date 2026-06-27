@@ -179,8 +179,9 @@ async def unpublish_content(
     """Unpublish the public copy of ``sha``.
 
     Reached only on the dashboard host (the gate rejects it elsewhere). Deletes
-    the public object (idempotent), computes the slash + no-slash CloudFront
-    invalidation paths, and atomically marks both metadata items ``unpublished``.
+    the public object (idempotent), purges the rewritten CloudFront cache key
+    (``/u/{sha}/index.html``), and atomically marks both metadata items
+    ``unpublished``.
     ``require_csrf`` enforces the CSRF header + dashboard Origin before any state
     change; an unknown SHA surfaces as ``content_not_found``.
     """

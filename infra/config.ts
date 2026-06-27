@@ -62,3 +62,69 @@ export function loadDataConfig(): DataConfig {
       cfg.getNumber("tmpExpirationDays") ?? DATA_DEFAULTS.tmpExpirationDays,
   };
 }
+
+// --- Edge (compute + CDN) configuration ------------------------------------
+
+/**
+ * Resolved configuration for the compute (Lambda + API Gateway) and CDN
+ * (CloudFront) layers. Like {@link DataConfig} this is a plain shape so the
+ * resource constructors stay unit-testable under Pulumi mocks.
+ *
+ * The host names mirror the backend settings provider
+ * (`share.config.settings.Settings`): `share.example.com` and
+ * `private.usercontent.example` are the two PRIVATE hosts fronting the same
+ * API-Gateway/Lambda; `public.usercontent.example` is the PUBLIC host served only
+ * by CloudFront. The Lambda runtime contract (py3.12 / arm64 / 512 MB / 30 s /
+ * Mangum handler) is PRD-mandated and overridable per stack.
+ */
+export interface EdgeConfig {
+  /** AWS region for every edge resource (PRD: `us-east-1`). */
+  readonly region: string;
+  /** Dashboard + mutation-API host. Mirrors backend `Settings.dashboard_host`. */
+  readonly dashboardHost: string;
+  /** Authenticated private content host. Mirrors `Settings.private_host`. */
+  readonly privateHost: string;
+  /** Unauthenticated public content host. Mirrors `Settings.public_host`. */
+  readonly publicHost: string;
+  /** Lambda memory in MB (PRD: 512). */
+  readonly lambdaMemoryMb: number;
+  /** Lambda timeout in seconds (PRD: 30). */
+  readonly lambdaTimeoutSeconds: number;
+  /** Mangum handler path (`module.attr`), matching `share/handler.py`. */
+  readonly lambdaHandler: string;
+  /** CloudWatch retention for Lambda + API logs (PRD: 30 days). */
+  readonly logRetentionDays: number;
+}
+
+/** Defaults mirroring the backend settings provider + PRD Lambda contract. */
+export const EDGE_DEFAULTS = {
+  region: DATA_DEFAULTS.region,
+  dashboardHost: "share.example.com",
+  privateHost: "private.usercontent.example",
+  publicHost: "public.usercontent.example",
+  lambdaMemoryMb: 512,
+  lambdaTimeoutSeconds: 30,
+  lambdaHandler: "share.handler.handler",
+  logRetentionDays: 30,
+} as const;
+
+/** Build the {@link EdgeConfig} from Pulumi stack config + {@link EDGE_DEFAULTS}. */
+export function loadEdgeConfig(): EdgeConfig {
+  const cfg = new pulumi.Config("share");
+  const awsRegion = new pulumi.Config("aws").get("region");
+
+  return {
+    region: awsRegion ?? cfg.get("region") ?? EDGE_DEFAULTS.region,
+    dashboardHost: cfg.get("dashboardHost") ?? EDGE_DEFAULTS.dashboardHost,
+    privateHost: cfg.get("privateHost") ?? EDGE_DEFAULTS.privateHost,
+    publicHost: cfg.get("publicHost") ?? EDGE_DEFAULTS.publicHost,
+    lambdaMemoryMb:
+      cfg.getNumber("lambdaMemoryMb") ?? EDGE_DEFAULTS.lambdaMemoryMb,
+    lambdaTimeoutSeconds:
+      cfg.getNumber("lambdaTimeoutSeconds") ??
+      EDGE_DEFAULTS.lambdaTimeoutSeconds,
+    lambdaHandler: cfg.get("lambdaHandler") ?? EDGE_DEFAULTS.lambdaHandler,
+    logRetentionDays:
+      cfg.getNumber("logRetentionDays") ?? EDGE_DEFAULTS.logRetentionDays,
+  };
+}

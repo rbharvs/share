@@ -11,9 +11,10 @@ metadata/object drift from any earlier partial run) converges on a re-run:
   says published; because the metadata is driven from the lookup item it
   reconciles metadata when the object already exists. Republish reuses the same
   SHA-addressed public URL.
-* ``unpublish`` deletes the public object (idempotent if absent), computes the
-  slash + no-slash CloudFront invalidation paths, and atomically marks BOTH
-  metadata items ``unpublished``.
+* ``unpublish`` deletes the public object (idempotent if absent), purges the
+  rewritten CloudFront cache key for the public copy (``/u/{sha}/index.html`` —
+  the URI the viewer-request rewrite function caches under), and atomically
+  marks BOTH metadata items ``unpublished``.
 
 Both metadata items are written through the same single two-item transaction
 finalize uses (:meth:`MetadataRepository.put_content_item`), and the list item's
@@ -48,14 +49,25 @@ def _iso_ms(epoch: float) -> str:
     return f"{dt.strftime('%Y-%m-%dT%H:%M:%S')}.{dt.microsecond // 1000:03d}Z"
 
 
-def invalidation_paths(sha256: str) -> list[str]:
-    """The slash + no-slash CloudFront paths for a published SHA.
+def invalidation_paths(public_key: str) -> list[str]:
+    """The CloudFront cache-key path to purge for a published public object.
 
-    CloudFront treats ``/u/{sha}`` and ``/u/{sha}/`` as distinct cache keys, so
-    both must be purged for the public copy to disappear from the edge.
+    The viewer-request rewrite function (``REWRITE_FUNCTION_CODE`` in
+    ``infra/cdn.ts``) maps both ``/u/{sha}`` and ``/u/{sha}/`` to
+    ``/u/{sha}/index.html`` *before* CloudFront performs its cache lookup. A URI
+    change in the viewer-request event becomes part of the cache key, so the
+    artifact is cached at the edge under that single rewritten key — which is
+    exactly ``/`` + the public object key.
+
+    Purging the bare ``/u/{sha}`` and ``/u/{sha}/`` shapes (as an earlier
+    revision did) therefore never matches the real cache entry, leaving
+    unpublished content served from the edge until the TTL expires. We instead
+    invalidate the rewritten cache-key path itself, derived from ``public_key``
+    so it stays locked to where the object actually lives *and* where the
+    rewrite points — the two can never drift.
     """
 
-    return [f"/u/{sha256}", f"/u/{sha256}/"]
+    return [f"/{public_key}"]
 
 
 class PublishService:
@@ -143,8 +155,10 @@ class PublishService:
 
         # Delete the public object if present (idempotent) ...
         self._storage.delete_public_object(public_key)
-        # ... and purge both CloudFront path shapes for the public copy.
-        self._invalidator.invalidate(invalidation_paths(sha256))
+        # ... and purge the rewritten CloudFront cache key for the public copy
+        # (derived from the same public_key the object lives at, so it matches
+        # the viewer-request rewrite's output and can't drift).
+        self._invalidator.invalidate(invalidation_paths(public_key))
 
         already_unpublished = (
             item.status is ContentStatus.UNPUBLISHED

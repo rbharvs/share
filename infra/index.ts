@@ -13,7 +13,11 @@
 
 import * as path from "node:path";
 
-import { loadDataConfig } from "./config";
+import * as pulumi from "@pulumi/pulumi";
+
+import { loadDataConfig, loadEdgeConfig } from "./config";
+import { createCdnResources } from "./cdn";
+import { createComputeResources } from "./compute";
 import { createDataResources } from "./data";
 
 /**
@@ -30,10 +34,33 @@ export const lambdaArtifactPath: string = path.resolve(
 );
 
 const data = createDataResources(loadDataConfig());
+const edgeConfig = loadEdgeConfig();
 
-// Stack outputs consumed by slice 13 (compute/CDN) — the table to grant the
-// Lambda, and the two bucket identities (the public bucket's regional domain is
-// the CloudFront OAC origin).
+// CDN first: the public distribution only needs the (private) public bucket, and
+// the compute layer needs the distribution id/arn (Lambda env + invalidation
+// IAM). data -> cdn -> compute, no cycle.
+const cdn = createCdnResources({
+  cfg: edgeConfig,
+  provider: data.provider,
+  publicBucket: data.publicBucket,
+});
+
+const compute = createComputeResources({
+  cfg: edgeConfig,
+  provider: data.provider,
+  // Pulumi treats the prebuilt zip as an opaque input — no build at preview.
+  code: new pulumi.asset.FileArchive(lambdaArtifactPath),
+  tableName: data.table.name,
+  tableArn: data.table.arn,
+  privateBucket: data.privateBucket.bucket,
+  privateBucketArn: data.privateBucket.arn,
+  publicBucket: data.publicBucket.bucket,
+  publicBucketArn: data.publicBucket.arn,
+  distributionId: cdn.distribution.id,
+  distributionArn: cdn.distribution.arn,
+});
+
+// --- Data-layer stack outputs ---------------------------------------------
 export const tableName = data.table.name;
 export const tableArn = data.table.arn;
 export const privateBucketName = data.privateBucket.bucket;
@@ -42,3 +69,15 @@ export const publicBucketName = data.publicBucket.bucket;
 export const publicBucketArn = data.publicBucket.arn;
 export const publicBucketRegionalDomainName =
   data.publicBucket.bucketRegionalDomainName;
+
+// --- Compute + CDN stack outputs (consumed by slice 14 Cloudflare wiring) --
+export const lambdaName = compute.lambda.name;
+export const lambdaArn = compute.lambda.arn;
+export const restApiId = compute.restApi.id;
+/** Regional API Gateway domains the private hosts CNAME to (slice 14 DNS). */
+export const apiRegionalDomainNames = compute.customDomains.map(
+  (d) => d.regionalDomainName,
+);
+/** The public host's CloudFront domain (slice 14 DNS-only record target). */
+export const cloudFrontDomainName = cdn.distribution.domainName;
+export const cloudFrontDistributionId = cdn.distribution.id;

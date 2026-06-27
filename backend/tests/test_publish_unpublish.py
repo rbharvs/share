@@ -327,21 +327,23 @@ def test_unpublish_deletes_object_marks_down_and_invalidates(
     assert item.public_key is None
     assert _list_item(aws_backends, sha)["status"] == "unpublished"
 
-    # Computed slash + no-slash CloudFront invalidation paths.
-    assert invalidator.calls == [[f"/u/{sha}", f"/u/{sha}/"]]
+    # The rewritten CloudFront cache key (/u/{sha}/index.html) is purged — the
+    # URI the viewer-request rewrite caches under, exactly the deleted object's
+    # path. Purging the bare /u/{sha} shapes would miss the real edge entry.
+    assert invalidator.calls == [[f"/u/{sha}/index.html"]]
 
 
 def test_unpublish_when_no_public_object_still_invalidates(
     client, aws_backends, signer, invalidator
 ):
     # Never published: unpublish is idempotent — deletes nothing, still marks
-    # down and computes the invalidation paths.
+    # down and purges the rewritten cache key.
     sha = _seed(client, signer, aws_backends, data=HTML_BYTES, filename="demo.html")
 
     response = _unpublish(client, signer, sha)
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "unpublished"
-    assert invalidator.calls == [[f"/u/{sha}", f"/u/{sha}/"]]
+    assert invalidator.calls == [[f"/u/{sha}/index.html"]]
 
 
 def test_unpublish_unknown_sha_is_content_not_found(client, signer):
