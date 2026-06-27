@@ -1,9 +1,8 @@
 /**
  * Pulumi entrypoint for the `share` infrastructure (AWS + Cloudflare).
  *
- * Slice 11 only scaffolds this workspace so later slices have a home and CI can
- * typecheck it. The empty stack is filled in by:
- *   - slice 12: DynamoDB metadata table + private/public S3 buckets
+ * Slice 12 fills in the stateful data layer (DynamoDB single table + private and
+ * public S3 buckets). The remaining stack is filled in by:
  *   - slice 13: Lambda + API Gateway (REST) + CloudFront/OAC + ACM
  *   - slice 14: Cloudflare DNS records + Access apps/policies + deploy wiring
  *
@@ -13,6 +12,9 @@
  */
 
 import * as path from "node:path";
+
+import { loadDataConfig } from "./config";
+import { createDataResources } from "./data";
 
 /**
  * Absolute path to the single Lambda deployment artifact produced by
@@ -26,3 +28,17 @@ export const lambdaArtifactPath: string = path.resolve(
   "dist",
   "lambda.zip",
 );
+
+const data = createDataResources(loadDataConfig());
+
+// Stack outputs consumed by slice 13 (compute/CDN) — the table to grant the
+// Lambda, and the two bucket identities (the public bucket's regional domain is
+// the CloudFront OAC origin).
+export const tableName = data.table.name;
+export const tableArn = data.table.arn;
+export const privateBucketName = data.privateBucket.bucket;
+export const privateBucketArn = data.privateBucket.arn;
+export const publicBucketName = data.publicBucket.bucket;
+export const publicBucketArn = data.publicBucket.arn;
+export const publicBucketRegionalDomainName =
+  data.publicBucket.bucketRegionalDomainName;

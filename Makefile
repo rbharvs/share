@@ -22,14 +22,14 @@ LAMBDA_ZIP := $(BACKEND)/dist/lambda.zip
 
 .PHONY: help test check format fix dev preview build \
         backend-test backend-check backend-format backend-fix \
-        frontend-check frontend-build infra-check
+        frontend-check frontend-build infra-check infra-test
 
 help:
 	@echo "Targets: test | check | format | fix | dev | preview | build"
 
 # --- Aggregate targets ---
 
-test: backend-test ## Run all test suites
+test: backend-test infra-test ## Run all test suites
 
 check: backend-check frontend-check infra-check ## Lint + typecheck everything
 
@@ -87,6 +87,13 @@ frontend-build:
 infra-check:
 	@if [ -f $(INFRA)/package.json ]; then \
 		cd $(INFRA) && npm run typecheck; \
+	else echo "infra not scaffolded yet (slices 12-14)"; fi
+
+# Focused config checks: run the Pulumi program under unit-test mocks (no AWS,
+# no `pulumi up`) and assert the data-layer security/PRD invariants.
+infra-test:
+	@if [ -f $(INFRA)/package.json ]; then \
+		cd $(INFRA) && npm test; \
 	else echo "infra not scaffolded yet (slices 12-14)"; fi
 
 # --- Packaging (slice 11) ---
