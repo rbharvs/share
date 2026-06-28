@@ -46,13 +46,16 @@ local oxfmt = (Builtins.oxfmt) {
 
 // --- Typecheck (project-scoped, reuse each workspace's npm script) ---
 
+// NOTE: when `dir` is set, hk matches `glob` RELATIVE to that dir -- so these
+// globs are workspace-relative (not repo-relative like the no-dir steps above).
+// check runs the workspace's own project-scoped typecheck (no {{ files }}).
 local tscFrontend = new Step {
-  glob = List("frontend/**/*.{ts,tsx}")
+  glob = List("**/*.{ts,tsx}")
   dir = "frontend"
   check = "npm run typecheck"
 }
 local tscInfra = new Step {
-  glob = List("infra/**/*.ts")
+  glob = List("**/*.ts")
   dir = "infra"
   check = "npm run typecheck"
 }
