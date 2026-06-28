@@ -59,17 +59,39 @@ export interface CdnInputs {
 }
 
 /**
- * Build the CloudFront response-headers `customHeadersConfig` items from the
- * shared security headers + the public cache directive. Emitting every header
- * as an explicit `override: true` custom header keeps the byte-for-byte parity
- * with the backend helper trivially assertable.
+ * CloudFront REJECTS recognized security headers (CSP, X-Content-Type-Options,
+ * Referrer-Policy, …) in `customHeadersConfig` — they must be declared in the
+ * dedicated `securityHeadersConfig` block instead. So the shared header set is
+ * split: the recognized ones map to typed `securityHeadersConfig` fields, and
+ * only the genuinely-custom headers (X-Robots-Tag, Cache-Control) remain custom.
+ * The emitted header VALUES still mirror the backend helper byte-for-byte.
+ */
+function securityHeadersConfig(): aws.types.input.cloudfront.ResponseHeadersPolicySecurityHeadersConfig {
+  return {
+    contentSecurityPolicy: {
+      contentSecurityPolicy: SHARED_SECURITY_HEADERS["Content-Security-Policy"],
+      override: true,
+    },
+    // CloudFront emits a fixed `X-Content-Type-Options: nosniff`; only `override`
+    // is configurable, which matches the shared header's value.
+    contentTypeOptions: { override: true },
+    referrerPolicy: {
+      referrerPolicy: SHARED_SECURITY_HEADERS["Referrer-Policy"],
+      override: true,
+    },
+  };
+}
+
+/**
+ * The non-recognized headers (CloudFront has no typed slot for these) emitted as
+ * explicit `override: true` custom headers.
  */
 function customHeaderItems(): aws.types.input.cloudfront.ResponseHeadersPolicyCustomHeadersConfigItem[] {
-  const all: Record<string, string> = {
-    ...SHARED_SECURITY_HEADERS,
+  const custom: Record<string, string> = {
+    "X-Robots-Tag": SHARED_SECURITY_HEADERS["X-Robots-Tag"],
     "Cache-Control": PUBLIC_CACHE_CONTROL,
   };
-  return Object.entries(all).map(([header, value]) => ({
+  return Object.entries(custom).map(([header, value]) => ({
     header,
     value,
     override: true,
@@ -97,6 +119,7 @@ export function createCdnResources(inputs: CdnInputs): CdnResources {
     "public-security-headers",
     {
       comment: "Rendered-content security headers (mirrors the private helper)",
+      securityHeadersConfig: securityHeadersConfig(),
       customHeadersConfig: { items: customHeaderItems() },
     },
     opts,

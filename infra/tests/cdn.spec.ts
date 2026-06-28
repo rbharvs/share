@@ -112,12 +112,31 @@ describe("public CDN layer", () => {
 
   describe("response-headers policy", () => {
     it("emits the shared security headers + public cache, byte-for-byte", async () => {
-      const cfg = await promiseOf(cdn.responseHeadersPolicy.customHeadersConfig);
-      const items = cfg?.items ?? [];
-      const emitted = Object.fromEntries(items.map((i) => [i.header, i.value]));
+      // Recognized security headers live in the typed securityHeadersConfig
+      // (CloudFront rejects them as custom headers); the rest are custom.
+      const sec = await promiseOf(
+        cdn.responseHeadersPolicy.securityHeadersConfig,
+      );
+      const customCfg = await promiseOf(
+        cdn.responseHeadersPolicy.customHeadersConfig,
+      );
+      const customItems = customCfg?.items ?? [];
+
+      const emitted: Record<string, string | undefined> = {
+        "Content-Security-Policy": sec?.contentSecurityPolicy
+          ?.contentSecurityPolicy,
+        "X-Content-Type-Options": sec?.contentTypeOptions ? "nosniff" : undefined,
+        "Referrer-Policy": sec?.referrerPolicy?.referrerPolicy,
+        ...Object.fromEntries(customItems.map((i) => [i.header, i.value])),
+      };
+      // Same emitted set as the backend helper, byte-for-byte.
       expect(emitted).to.deep.equal(publicResponseHeaders());
-      // Every header is an explicit override so the origin can never weaken it.
-      for (const item of items) {
+
+      // Every override flag is set so the origin can never weaken a header.
+      expect(sec?.contentSecurityPolicy?.override).to.equal(true);
+      expect(sec?.contentTypeOptions?.override).to.equal(true);
+      expect(sec?.referrerPolicy?.override).to.equal(true);
+      for (const item of customItems) {
         expect(item.override).to.equal(true);
       }
       // The load-bearing isolation directive must never gain same-origin.
