@@ -2,7 +2,7 @@
 
 ## Project Context
 
-This is a greenfield personal sharing service. Read `PRD.md` before implementing anything substantial; it is the source of truth for product, security, architecture, API, infra, and testing decisions.
+This is a personal sharing service, built end-to-end and deployed on AWS + Cloudflare. Read `PRD.md` before changing anything substantial; it is the source of truth for product, security, architecture, API, infra, and testing decisions. `issues/` holds the vertical-slice breakdown the build followed and doubles as the deploy runbook.
 
 ## Core Architecture
 
@@ -50,4 +50,5 @@ Never serve arbitrary uploaded content from `share.example.com`. Never expose da
 - Use npm for frontend and infra.
 - Build frontend, copy generated assets into backend package resources, then build one Lambda zip.
 - Pulumi consumes the prebuilt artifact; avoid doing expensive build work inside Pulumi preview.
-- Deployment is manual initially and should run tests/build first.
+- Deployment is manual and gated: `make deploy` runs tests + build, then an interactive `pulumi up`. Run `make boundary-checks` after an apply.
+- Stack config (`infra/Pulumi.prod.yaml`) is gitignored and holds account/zone ids + the KMS-encrypted Cloudflare token; copy `infra/Pulumi.prod.yaml.example` to start. Never commit real ids, tokens, or domains.
