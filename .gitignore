@@ -28,6 +28,10 @@ src/share/static/
 # Pulumi
 .pulumi/
 Pulumi.*.yaml.bak
+# Stack config holds real account/zone ids + the (KMS-encrypted) token; keep it
+# local. Only the placeholder example is tracked.
+Pulumi.*.yaml
+!Pulumi.*.yaml.example
 
 # Env / secrets
 .env

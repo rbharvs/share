@@ -73,24 +73,22 @@ These implementation-detail forks were settled with sensible defaults rather tha
 - Per-host Access AUD originates in Cloudflare/Pulumi and is mirrored into backend `AccessConfig` via config (slice 14).
 - SPA-at-`/` may need habit-tracker's trailing-slash `307` shim (decided in slice 09).
 
-## Deployment status
+## Deploy
 
-**LIVE (deployed 2026-06-27).** All 14 slices implemented, reviewed, and merged to `main`; the `prod` Pulumi stack is applied to AWS account `123456789012` + Cloudflare. 57 resources, all ACM certs `ISSUED`, CloudFront `Deployed`.
+Deployment is manual and gated: `make deploy` runs the tests + build, then an interactive `pulumi up` whose yes/no prompt is the gate. Slices 01–11 need no cloud at all (they run on moto + the local Access proxy); only slices 12–14 touch real AWS/Cloudflare. The `prod` stack provisions a single-table DynamoDB, two S3 buckets, an arm64 Lambda + REST API Gateway (Cloudflare-IP-restricted resource policy), an OAC-only CloudFront distribution for the public host, DNS-validated ACM certs, and the Cloudflare DNS + Zero Trust Access apps. After an apply, `scripts/boundary_checks.sh` exercises the host boundaries (Access-gated dashboard/private hosts, public host served only by the CDN, raw API Gateway invoke rejected).
 
-- Hosts: `share.example.com` + `private.usercontent.example` → **302 Cloudflare Access challenge** (gated); `public.usercontent.example` → CloudFront/OAC (never hits Lambda); raw API Gateway invoke → **403** (Cloudflare-IP resource policy). Boundary checks (`scripts/boundary_checks.sh`) pass for the two automatable checks; #1 (in-browser Access login) and #4 (needs a published SHA) are manual.
-- Key identifiers: stack `prod`, secrets provider `awskms://alias/share-pulumi`, REST API `xxxxxxxxxx` (stage `v1`), CloudFront `EXXXXXXXXXXXXX`, buckets `share-private-123456789012` / `share-public-123456789012` (account-suffixed to dodge S3's global namespace).
-- Config overrides applied at deploy: `share:cloudflareTeamDomain=myteam` (the slice-14 default `example` was wrong — issuer must be `https://myteam.cloudflareaccess.com`), and the two account-suffixed bucket names.
-- **Two bugs surfaced only at `pulumi up`** (the mock-based config tests can't validate against the real AWS API), both fixed on `main`: (1) CloudFront `ResponseHeadersPolicy` must declare recognized security headers in `securityHeadersConfig`, not `customHeadersConfig`; (2) the ACM certs had no Cloudflare DNS-validation records or issuance gate, so they sat `PENDING_VALIDATION` — added `certValidation.ts`.
+Stack configuration lives in `infra/Pulumi.prod.yaml` (gitignored — it holds account/zone ids and the KMS-encrypted Cloudflare token); copy `infra/Pulumi.prod.yaml.example` to start. The hosts, owner email, bucket names, and team slug are all config-driven, so the same code deploys to any account/domain.
 
-## Operator prerequisites (deploy bootstrap)
+**Two bugs surfaced only at real `pulumi up`** (the mock-based config tests can't validate against the live AWS API), both since fixed: (1) CloudFront `ResponseHeadersPolicy` must declare recognized security headers in `securityHeadersConfig`, not `customHeadersConfig`; (2) DNS-validated ACM certs need their validation records written to the DNS zone and an issuance gate, or they sit `PENDING_VALIDATION` — see `infra/certValidation.ts`.
 
-Status of the human/external prerequisites for the infra slices. **Slices 01–11 need none of this** — they run on moto + the local Access proxy. Required only before slices 12–14 `pulumi up`:
+## Deploy prerequisites
 
-- **Domains/zones** — `example.com` and `usercontent.example` both active on Cloudflare (same account). `usercontent.example` registrar is Namecheap, nameservers repointed to Cloudflare.
-- **Cloudflare Access** — Zero Trust org exists: team `myteam` → issuer `https://myteam.cloudflareaccess.com` (the value slice 02's verifier checks). Login method already configured (reused from habits). The two per-host Access apps + audiences are created by Pulumi (slice 14).
-- **Cloudflare API token** `share-pulumi` — scopes: Account · *Access: Apps and Policies* = Edit, Account · *Access: Organizations, IdP, and Groups* = Read, Zone · *DNS* = Edit, Zone · *Zone* = Read (all zones). Backup in 1Password; also dropped as a local plaintext file **outside this repo** (operator-supplied path, `chmod 600`). Seed at slice 14 without echoing it: `pulumi config set --secret cloudflare:apiToken "$(tr -d '[:space:]' < <token-file>)"` — KMS-encrypts it into stack config, after which the plaintext file can be deleted.
-- **AWS account** `123456789012`, region `us-east-1`.
-- **Pulumi state backend** — self-managed S3: `s3://share-pulumi-state-123456789012?region=us-east-1` (private, versioned, AES256). `pulumi login` done; Pulumi CLI v3.248.0.
-- **Deploy identity** — `ShareDeployRole` (ARN `arn:aws:iam::123456789012:role/ShareDeployRole`), assumed by `deploy-iam-user` via `[profile share-deploy]` in `~/.aws/config`. Policies: AWS-managed `PowerUserAccess` + inline `ShareDeployIam` (IAM role/policy management + `PassRole` to lambda/apigateway, scoped to `role/share-*` & `policy/share-*`). **Run every `pulumi`/deploy command with `AWS_PROFILE=share-deploy`** — root is no longer needed (it was used once to bootstrap the state bucket + this role). **Infra must name any IAM role/policy it creates with a `share-` prefix** (e.g. the Lambda execution role) or the scoped IAM perms won't apply.
-- **Stack secrets provider (decided)** — `awskms://alias/share-pulumi`. The KMS key + alias are created out-of-band at the first `pulumi stack init` (slice 12) as `share-deploy` (PowerUser covers KMS). Pulumi then decrypts config secrets automatically via the role's KMS access — no passphrase to manage.
-- **Deploy authorization (granted 2026-06-27)** — the operator authorized the agent to run `pulumi preview`/`pulumi up` as `AWS_PROFILE=share-deploy` without per-deploy approval. Practice: always `pulumi preview` first and report the diff; explicitly flag any destructive replace/delete before applying. (Cloudflare deploys at slice 14 still require the API token to be seeded into stack config first — see the token bullet above.)
+Provisioned out-of-band before the first `pulumi up`:
+
+- **Domains/zones** — the dashboard apex and the content apex both active on Cloudflare (same account).
+- **Cloudflare Access** — a Zero Trust org (its team slug becomes the JWT issuer `https://<slug>.cloudflareaccess.com` that the slice-02 verifier checks). Pulumi creates the two per-host Access apps + audiences.
+- **Cloudflare API token** — scopes: Account · *Access: Apps and Policies* = Edit, Account · *Access: Organizations, IdP, and Groups* = Read, Zone · *DNS* = Edit, Zone · *Zone* = Read. Seed it as a stack secret: `pulumi config set --secret share:cloudflareApiToken <token>` (KMS-encrypted into stack config).
+- **AWS account** + region (`us-east-1`; CloudFront/ACM require it).
+- **Pulumi state backend** — a self-managed S3 bucket (private, versioned, encrypted), then `pulumi login`.
+- **Deploy identity** — a non-root IAM role with `PowerUserAccess` + an inline policy for IAM role/policy management and `PassRole` to lambda/apigateway, scoped to `role/share-*` & `policy/share-*`. Run deploy commands under that profile. **Infra must name any IAM role/policy with a `share-` prefix** or the scoped permissions won't apply.
+- **Stack secrets provider** — `awskms://alias/<key-alias>`; create the KMS key + alias at first `pulumi stack init` so Pulumi decrypts config secrets with no passphrase to manage.

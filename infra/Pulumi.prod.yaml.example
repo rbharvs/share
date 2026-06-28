@@ -1,0 +1,26 @@
+# Example stack config. Copy to `Pulumi.prod.yaml` (gitignored) and fill in real
+# values, or set them with `pulumi config set`. The Cloudflare API token is a
+# secret: `pulumi config set --secret share:cloudflareApiToken <token>` (stored
+# KMS-encrypted via the secrets provider below).
+secretsprovider: awskms://alias/share-pulumi?region=us-east-1
+config:
+  aws:region: us-east-1
+  # Cloudflare account + the two zones (dashboard apex, content apex).
+  share:cloudflareAccountId: <CLOUDFLARE_ACCOUNT_ID>
+  share:dashboardZoneId: <DASHBOARD_ZONE_ID>
+  share:contentZoneId: <CONTENT_ZONE_ID>
+  # Zero Trust team slug -> issuer https://<slug>.cloudflareaccess.com
+  share:cloudflareTeamDomain: myteam
+  # Owner allowlist (backend verifier + Cloudflare Access policy).
+  share:allowedOwnerEmail: owner@example.com
+  # share:cloudflareApiToken: set with `pulumi config set --secret` (never commit).
+  # S3 bucket names are global; suffix with the account id to stay unique.
+  share:privateBucket: share-private-<AWS_ACCOUNT_ID>
+  share:publicBucket: share-public-<AWS_ACCOUNT_ID>
+  # The three hosts (dashboard on its own registrable domain; private + public
+  # share the content apex).
+  share:dashboardHost: share.example.com
+  share:privateHost: private.usercontent.example
+  share:publicHost: public.usercontent.example
+  share:dashboardOrigins:
+    - https://share.example.com

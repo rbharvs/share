@@ -94,6 +94,7 @@ describe("compute layer", () => {
         "https://myteam.cloudflareaccess.com/cdn-cgi/access/certs",
       dashboardAudience: "dashboard-aud-tag",
       privateAudience: "private-aud-tag",
+      ownerEmail: "owner@example.com",
       cloudflareProvider: new cloudflare.Provider("cf", {
         apiToken: "test-token",
       }),
@@ -127,6 +128,8 @@ describe("compute layer", () => {
       expect(vars.SHARE_TABLE_NAME).to.equal("share");
       expect(vars.SHARE_PRIVATE_BUCKET).to.equal("share-private");
       expect(vars.SHARE_PUBLIC_BUCKET).to.equal("share-public");
+      // Owner allowlist injected from config (never the generic settings.py default).
+      expect(vars.SHARE_ALLOWED_OWNER_EMAIL).to.equal("owner@example.com");
     });
 
     it("mirrors the Cloudflare Access issuer + per-host AUDs into the env", async () => {

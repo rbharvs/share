@@ -91,6 +91,7 @@ const compute = createComputeResources({
   accessJwksUrl: access.jwksUrl,
   dashboardAudience: access.dashboardAudience,
   privateAudience: access.privateAudience,
+  ownerEmail: cloudflareConfig.allowedOwnerEmail,
   // ACM DNS validation lands in the matching Cloudflare zone per host apex.
   cloudflareProvider,
   dashboardZoneId: cloudflareConfig.dashboardZoneId,

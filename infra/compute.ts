@@ -65,6 +65,8 @@ export interface ComputeInputs {
   readonly accessJwksUrl: pulumi.Input<string>;
   readonly dashboardAudience: pulumi.Input<string>;
   readonly privateAudience: pulumi.Input<string>;
+  /** Owner allowlist email -> SHARE_ALLOWED_OWNER_EMAIL (backend Settings). */
+  readonly ownerEmail: pulumi.Input<string>;
   // --- ACM DNS validation via Cloudflare -----------------------------------
   /** Cloudflare provider for the per-host cert validation records. */
   readonly cloudflareProvider: cloudflare.Provider;
@@ -128,6 +130,9 @@ function lambdaEnvironment(
     SHARE_PRIVATE_HOST: cfg.privateHost,
     SHARE_PUBLIC_HOST: cfg.publicHost,
     SHARE_DASHBOARD_ORIGIN: `https://${cfg.dashboardHost}`,
+    // Owner allowlist, injected so prod never falls back to the generic
+    // settings.py default; mirrors the Cloudflare Access policy email.
+    SHARE_ALLOWED_OWNER_EMAIL: inputs.ownerEmail,
     SHARE_TABLE_NAME: inputs.tableName,
     SHARE_PRIVATE_BUCKET: inputs.privateBucket,
     SHARE_PUBLIC_BUCKET: inputs.publicBucket,
@@ -436,11 +441,13 @@ export function createComputeResources(inputs: ComputeInputs): ComputeResources 
       { domainName: host, validationMethod: "DNS" },
       opts,
     );
-    // Resolve the owning Cloudflare zone by apex, validate via DNS, and attach
-    // the ISSUED-gated arn so the custom domain never races a pending cert.
-    const zoneId = host.endsWith("example.com")
-      ? inputs.dashboardZoneId
-      : inputs.contentZoneId;
+    // Resolve the owning Cloudflare zone by host ROLE, not by domain apex: the
+    // dashboard host lives on its own zone, the private host on the content
+    // zone. (Keying off the apex breaks the moment the configured hosts differ
+    // from the defaults.) Then validate via DNS and attach the ISSUED-gated arn
+    // so the custom domain never races a pending cert.
+    const zoneId =
+      key === "dashboard" ? inputs.dashboardZoneId : inputs.contentZoneId;
     const certValidation = validateCertificate({
       name: key,
       certificate,
