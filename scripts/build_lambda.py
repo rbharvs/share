@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reproducible single-zip Lambda packaging for the ``share`` backend.
 
-This is the deep module behind ``make build``. It turns the working app into one
+This is the deep module behind ``mise run build``. It turns the working app into one
 self-contained Lambda deployment artifact — no Lambda layers, no Docker — that
 Pulumi (slice 13) consumes as a prebuilt input, so ``pulumi preview`` never does
 expensive build work.

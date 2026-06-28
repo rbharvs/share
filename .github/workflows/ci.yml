@@ -26,6 +26,10 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install backend toolchain (python + uv)
         run: mise install python uv
+      # Fails if backend/uv.lock has drifted from pyproject.toml (UV_FROZEN
+      # would otherwise hide this; the task overrides it).
+      - name: Lockfile in sync
+        run: mise run lock-check
       # `mise run backend:check` = ruff lint + ruff format --check (read-only).
       - name: Lint + format check
         run: mise run backend:check

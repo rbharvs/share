@@ -7,7 +7,7 @@
  *   - slice 14: Cloudflare Access apps (whose AUDs feed the Lambda env) +
  *     Cloudflare DNS records (private hosts proxied, public host DNS-only)
  *
- * The Lambda is deployed from the PREBUILT zip emitted by `make build`
+ * The Lambda is deployed from the PREBUILT zip emitted by `mise run build`
  * (`backend/dist/lambda.zip`). Pulumi treats it as an opaque input — no frontend
  * build, no dependency vendoring, and no Docker happen during `pulumi preview`.
  */
@@ -25,7 +25,7 @@ import { createDataResources } from "./data";
 
 /**
  * Absolute path to the single Lambda deployment artifact produced by
- * `make build`. Slice 13 wraps this in a `pulumi.asset.FileArchive`; surfacing
+ * `mise run build`. Slice 13 wraps this in a `pulumi.asset.FileArchive`; surfacing
  * it here keeps the build/deploy contract in one obvious place.
  */
 export const lambdaArtifactPath: string = path.resolve(

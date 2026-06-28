@@ -5,9 +5,9 @@
 # The deployed ingress chain has security boundaries that no `pulumi preview` or
 # unit test can prove — they only exist once Cloudflare + API Gateway + CloudFront
 # are live. This script exercises each one with a real HTTP request and asserts
-# the externally observable status code. Run it after `make deploy`:
+# the externally observable status code. Run it after `mise run deploy`:
 #
-#     make boundary-checks
+#     mise run boundary-checks
 #
 # It is the executable form of the slice-14 runbook's "deployed-boundary checks".
 # Nothing here mutates state; every request is a GET.
@@ -36,7 +36,7 @@
 # Hosts and the sample SHA come from the environment (or the checked-in
 # production defaults). Override per run, e.g.:
 #
-#     PUBLIC_SHA=<a-published-sha> make boundary-checks
+#     PUBLIC_SHA=<a-published-sha> mise run boundary-checks
 #
 set -uo pipefail
 

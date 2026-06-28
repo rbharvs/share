@@ -40,7 +40,9 @@ UV_PYTHON = { value = "{{tools.python.path}}", tools = true }
 HK_MISE = "1"
 # Installs/runs use the committed backend/uv.lock exactly -- never silently
 # re-resolve to newer (possibly <72h) versions. The lock is updated only
-# deliberately via `mise run relock` (which overrides this).
+# deliberately via `mise run relock` (which overrides this). NOTE: UV_FROZEN=1
+# also degrades `uv lock --check` to a structure-only no-op, so the `lock-check`
+# task below sets UV_FROZEN=0 to actually verify lock<->pyproject sync.
 UV_FROZEN = "1"
 
 # --- Aggregate targets (was: make test / check / format / fix) ---
@@ -51,7 +53,15 @@ depends = ["backend:test", "infra:test"]
 
 [tasks.check]
 description = "Lint + typecheck everything"
-depends = ["backend:check", "frontend:check", "infra:check", "lint", "fmt-check"]
+depends = ["backend:check", "frontend:check", "infra:check", "lint", "fmt-check", "lock-check"]
+
+[tasks."lock-check"]
+description = "Verify backend/uv.lock is in sync with pyproject.toml"
+dir = "backend"
+# UV_FROZEN=1 degrades `uv lock --check` to a no-op, so override it here to get
+# a real up-to-date check (fails if pyproject drifts from the lock).
+env = { UV_FROZEN = "0" }
+run = "uv lock --check"
 
 [tasks.format]
 description = "Format all code (ruff for Python, oxfmt for TS/JS)"

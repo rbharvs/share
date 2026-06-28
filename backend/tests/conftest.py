@@ -34,7 +34,7 @@ JWKS_URL = "https://team.cloudflareaccess.test/cdn-cgi/access/certs"
 # so we inject this deterministic bundle rather than depending on the gitignored
 # package ``static`` dir, whose presence/absence flips between the unbuilt
 # placeholder and the real (hash-named) bundle and would otherwise make the suite
-# pass or fail depending on whether ``make build`` has run.
+# pass or fail depending on whether ``mise run build`` has run.
 _BUILT_ASSET_NAME = "index-test123.js"
 _BUILT_ASSET_JS = "console.log('built dashboard bundle');"
 _BUILT_INDEX_HTML = (

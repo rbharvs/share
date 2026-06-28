@@ -2,7 +2,7 @@
 
 This is the deep module behind the dashboard's SPA / asset / robots surface. The
 built Vite bundle is copied into ``src/share/static`` at build time (gitignored);
-the same FastAPI process serves it locally (``make preview``) and on Lambda, so
+the same FastAPI process serves it locally (``mise run preview``) and on Lambda, so
 production and preview exercise byte-identical serving code.
 
 Precedence falls out naturally: the SPA history fallback runs only in the 404
@@ -39,7 +39,7 @@ BUNDLED_STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
 _PLACEHOLDER_INDEX = (
     "<!doctype html><html><head><title>share dashboard</title></head>"
     "<body><main>share dashboard — SPA bundle not built; run "
-    "<code>make preview</code> or <code>npm run build</code>.</main></body></html>"
+    "<code>mise run preview</code> or <code>npm run build</code>.</main></body></html>"
 )
 
 
