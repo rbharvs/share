@@ -105,8 +105,7 @@ function customHeaderItems(): aws.types.input.cloudfront.ResponseHeadersPolicyCu
 }
 
 export function createCdnResources(inputs: CdnInputs): CdnResources {
-  const { cfg, provider, publicBucket, cloudflareProvider, publicZoneId } =
-    inputs;
+  const { cfg, provider, publicBucket, cloudflareProvider, publicZoneId } = inputs;
   const opts: pulumi.CustomResourceOptions = { provider };
 
   // OAC: CloudFront signs origin requests with SigV4 so the bucket can stay
@@ -191,9 +190,7 @@ export function createCdnResources(inputs: CdnInputs): CdnResources {
         // our own response-headers policy supplies the security headers.
         cachePolicyId: "658327ea-f89d-4fab-a63d-7e88639e58f6",
         responseHeadersPolicyId: responseHeadersPolicy.id,
-        functionAssociations: [
-          { eventType: "viewer-request", functionArn: rewriteFunction.arn },
-        ],
+        functionAssociations: [{ eventType: "viewer-request", functionArn: rewriteFunction.arn }],
       },
       restrictions: {
         geoRestriction: { restrictionType: "none" },

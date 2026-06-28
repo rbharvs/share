@@ -25,10 +25,7 @@ export class ApiError extends Error {
   readonly requestId: string | null;
   readonly status: number;
 
-  constructor(
-    message: string,
-    opts: { code?: string; requestId?: string | null; status: number },
-  ) {
+  constructor(message: string, opts: { code?: string; requestId?: string | null; status: number }) {
     super(message);
     this.name = "ApiError";
     this.code = opts.code ?? "unknown_error";
@@ -48,14 +45,11 @@ async function parseErrorBody(response: Response): Promise<ApiErrorBody> {
 /** Decode a non-2xx dashboard response into a structured {@link ApiError}. */
 async function errorFromResponse(response: Response): Promise<ApiError> {
   const body = await parseErrorBody(response);
-  return new ApiError(
-    body.error?.message ?? `Request failed (HTTP ${response.status}).`,
-    {
-      code: body.error?.code,
-      requestId: body.error?.request_id ?? null,
-      status: response.status,
-    },
-  );
+  return new ApiError(body.error?.message ?? `Request failed (HTTP ${response.status}).`, {
+    code: body.error?.code,
+    requestId: body.error?.request_id ?? null,
+    status: response.status,
+  });
 }
 
 /**
@@ -67,10 +61,7 @@ async function errorFromResponse(response: Response): Promise<ApiError> {
  * forbidden header JS cannot set itself, so it is never set here. No credentials
  * or tokens are read from JS — Access supplies auth out-of-band.
  */
-async function postDashboardJson<T>(
-  url: string,
-  body?: unknown,
-): Promise<T> {
+async function postDashboardJson<T>(url: string, body?: unknown): Promise<T> {
   let response: Response;
   try {
     response = await fetch(url, {
@@ -103,9 +94,7 @@ async function postDashboardJson<T>(
  * to {@link uploadToS3} (XHR, for progress), then {@link finalizeUpload} turns
  * the temp object into an immutable content item.
  */
-export function presignUpload(
-  body: PresignRequestBody,
-): Promise<PresignResponse> {
+export function presignUpload(body: PresignRequestBody): Promise<PresignResponse> {
   return postDashboardJson<PresignResponse>("/api/uploads/presign", body);
 }
 
@@ -128,9 +117,7 @@ export function finalizeUpload(uploadId: string): Promise<ContentItem> {
  * content item with `status: "published"` and a `public_url`.
  */
 export function publishContent(sha256: string): Promise<ContentItem> {
-  return postDashboardJson<ContentItem>(
-    `/api/content/${encodeURIComponent(sha256)}/publish`,
-  );
+  return postDashboardJson<ContentItem>(`/api/content/${encodeURIComponent(sha256)}/publish`);
 }
 
 /**
@@ -140,9 +127,7 @@ export function publishContent(sha256: string): Promise<ContentItem> {
  * content item with `status: "unpublished"` and a null `public_url`.
  */
 export function unpublishContent(sha256: string): Promise<ContentItem> {
-  return postDashboardJson<ContentItem>(
-    `/api/content/${encodeURIComponent(sha256)}/unpublish`,
-  );
+  return postDashboardJson<ContentItem>(`/api/content/${encodeURIComponent(sha256)}/unpublish`);
 }
 
 /**
@@ -153,9 +138,7 @@ export function unpublishContent(sha256: string): Promise<ContentItem> {
  * the local proxy) as a header the browser never sees. Non-2xx responses are
  * decoded into a structured {@link ApiError}.
  */
-export async function fetchContent(
-  cursor?: string | null,
-): Promise<ContentListResponse> {
+export async function fetchContent(cursor?: string | null): Promise<ContentListResponse> {
   const params = new URLSearchParams();
   if (cursor) params.set("cursor", cursor);
   const query = params.toString();

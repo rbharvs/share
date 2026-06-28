@@ -50,10 +50,10 @@ export function uploadToS3(
         resolve();
       } else {
         reject(
-          new ApiError(
-            "The file upload was rejected by storage. It may be too large.",
-            { code: "upload_rejected", status: xhr.status },
-          ),
+          new ApiError("The file upload was rejected by storage. It may be too large.", {
+            code: "upload_rejected",
+            status: xhr.status,
+          }),
         );
       }
     };
@@ -92,10 +92,10 @@ export async function runUpload(
   onProgress?: ProgressFn,
 ): Promise<ContentItem> {
   if (file.size > MAX_UPLOAD_BYTES) {
-    throw new ApiError(
-      `File is too large. The limit is ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB.`,
-      { code: "upload_too_large", status: 0 },
-    );
+    throw new ApiError(`File is too large. The limit is ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB.`, {
+      code: "upload_too_large",
+      status: 0,
+    });
   }
 
   const presign = await presignUpload({

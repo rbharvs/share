@@ -50,9 +50,7 @@ function pyDictValue(src: string, header: string): string {
 
 /** Extract the header NAMES declared in SHARED_SECURITY_HEADERS. */
 function pySharedHeaderNames(src: string): string[] {
-  const block = src.match(
-    /SHARED_SECURITY_HEADERS: dict\[str, str\] = \{([\s\S]*?)\}/,
-  );
+  const block = src.match(/SHARED_SECURITY_HEADERS: dict\[str, str\] = \{([\s\S]*?)\}/);
   if (!block) throw new Error("Could not find SHARED_SECURITY_HEADERS dict");
   return [...block[1].matchAll(/"([^"]+)"\s*:/g)].map((m) => m[1]);
 }
@@ -60,9 +58,7 @@ function pySharedHeaderNames(src: string): string[] {
 describe("rendered-content security headers (TS mirror of the backend helper)", () => {
   it("emits the same set of shared header names as the backend", () => {
     const names = pySharedHeaderNames(readHeadersPy());
-    expect(new Set(Object.keys(SHARED_SECURITY_HEADERS))).to.deep.equal(
-      new Set(names),
-    );
+    expect(new Set(Object.keys(SHARED_SECURITY_HEADERS))).to.deep.equal(new Set(names));
   });
 
   it("byte-matches the backend CSP (sandbox WITHOUT allow-same-origin)", () => {
@@ -74,14 +70,8 @@ describe("rendered-content security headers (TS mirror of the backend helper)", 
 
   it("byte-matches the remaining shared header values", () => {
     const src = readHeadersPy();
-    for (const header of [
-      "X-Content-Type-Options",
-      "Referrer-Policy",
-      "X-Robots-Tag",
-    ]) {
-      expect(SHARED_SECURITY_HEADERS[header]).to.equal(
-        pyDictValue(src, header),
-      );
+    for (const header of ["X-Content-Type-Options", "Referrer-Policy", "X-Robots-Tag"]) {
+      expect(SHARED_SECURITY_HEADERS[header]).to.equal(pyDictValue(src, header));
     }
   });
 

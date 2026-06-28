@@ -68,9 +68,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             role={t.variant === "error" ? "alert" : "status"}
             className={cn(
               "pointer-events-auto flex items-start gap-3 rounded-none border border-retro-line p-3 text-sm text-retro-ink shadow-hard-lg",
-              t.variant === "error"
-                ? "bg-retro-danger-weak"
-                : "bg-retro-accent-weak",
+              t.variant === "error" ? "bg-retro-danger-weak" : "bg-retro-accent-weak",
             )}
           >
             {t.variant === "error" ? (
@@ -80,14 +78,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             )}
             <div className="flex-1">
               <div className="font-medium">{t.title}</div>
-              {t.description && (
-                <div className="mt-0.5 opacity-90">{t.description}</div>
-              )}
-              {t.code && (
-                <div className="mt-1 font-mono text-xs opacity-70">
-                  {t.code}
-                </div>
-              )}
+              {t.description && <div className="mt-0.5 opacity-90">{t.description}</div>}
+              {t.code && <div className="mt-1 font-mono text-xs opacity-70">{t.code}</div>}
             </div>
             <button
               type="button"

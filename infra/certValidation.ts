@@ -39,9 +39,7 @@ function stripDot(value: string): string {
  * Write the cert's DNS-validation CNAME into Cloudflare and wait for issuance.
  * Single-domain certs expose exactly one validation option.
  */
-export function validateCertificate(
-  inputs: CertValidationInputs,
-): aws.acm.CertificateValidation {
+export function validateCertificate(inputs: CertValidationInputs): aws.acm.CertificateValidation {
   const { name, certificate, zoneId, cloudflareProvider, awsProvider } = inputs;
 
   const option = certificate.domainValidationOptions[0];

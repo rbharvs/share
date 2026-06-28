@@ -87,9 +87,7 @@ export interface CloudflareAccessResources {
  * stay SEPARATE precisely so they get DISTINCT AUDs — the per-host replay
  * defense the verifier relies on.
  */
-export function createCloudflareAccess(
-  inputs: CloudflareAccessInputs,
-): CloudflareAccessResources {
+export function createCloudflareAccess(inputs: CloudflareAccessInputs): CloudflareAccessResources {
   const { cfg, provider } = inputs;
   const opts: pulumi.CustomResourceOptions = { provider };
 
@@ -175,9 +173,7 @@ export interface CloudflareDnsResources {
  * traffic is forced through Cloudflare (Access + the API Gateway IP allowlist);
  * the public host is DNS-ONLY straight to CloudFront so it never touches Lambda.
  */
-export function createCloudflareDns(
-  inputs: CloudflareDnsInputs,
-): CloudflareDnsResources {
+export function createCloudflareDns(inputs: CloudflareDnsInputs): CloudflareDnsResources {
   const { cfg, provider } = inputs;
   const opts: pulumi.CustomResourceOptions = { provider };
 

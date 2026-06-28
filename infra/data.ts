@@ -56,9 +56,7 @@ function encryptBucket(
     name,
     {
       bucket: bucket.id,
-      rules: [
-        { applyServerSideEncryptionByDefault: { sseAlgorithm: "AES256" } },
-      ],
+      rules: [{ applyServerSideEncryptionByDefault: { sseAlgorithm: "AES256" } }],
     },
     opts,
   );
@@ -132,17 +130,9 @@ export function createDataResources(cfg: DataConfig): DataResources {
   );
 
   // --- Private bucket --------------------------------------------------------
-  const privateBucket = new aws.s3.BucketV2(
-    "private",
-    { bucket: cfg.privateBucket },
-    opts,
-  );
+  const privateBucket = new aws.s3.BucketV2("private", { bucket: cfg.privateBucket }, opts);
   const privateBucketSse = encryptBucket("private-sse", privateBucket, opts);
-  const privateBucketVersioning = disableVersioning(
-    "private-versioning",
-    privateBucket,
-    opts,
-  );
+  const privateBucketVersioning = disableVersioning("private-versioning", privateBucket, opts);
   const privateBucketAccessBlock = blockPublicAccess(
     "private-public-access-block",
     privateBucket,
@@ -193,17 +183,9 @@ export function createDataResources(cfg: DataConfig): DataResources {
   // --- Public bucket ---------------------------------------------------------
   // Stays *private*: served only through CloudFront OAC (the bucket policy that
   // grants the distribution access is added in slice 13).
-  const publicBucket = new aws.s3.BucketV2(
-    "public",
-    { bucket: cfg.publicBucket },
-    opts,
-  );
+  const publicBucket = new aws.s3.BucketV2("public", { bucket: cfg.publicBucket }, opts);
   const publicBucketSse = encryptBucket("public-sse", publicBucket, opts);
-  const publicBucketVersioning = disableVersioning(
-    "public-versioning",
-    publicBucket,
-    opts,
-  );
+  const publicBucketVersioning = disableVersioning("public-versioning", publicBucket, opts);
   const publicBucketAccessBlock = blockPublicAccess(
     "public-public-access-block",
     publicBucket,

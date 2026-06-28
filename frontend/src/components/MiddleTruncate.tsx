@@ -8,13 +8,7 @@ import { cn, splitForMiddleTruncate } from "@/lib/utils";
  * is exposed via `title` (hover) and `aria-label` (screen readers); the visible
  * head/tail spans are split so no character is duplicated when read aloud.
  */
-export function MiddleTruncate({
-  name,
-  className,
-}: {
-  name: string;
-  className?: string;
-}) {
+export function MiddleTruncate({ name, className }: { name: string; className?: string }) {
   const { head, tail } = splitForMiddleTruncate(name);
   return (
     <span
@@ -23,9 +17,7 @@ export function MiddleTruncate({
       aria-label={name}
       className={cn("flex min-w-0 max-w-full items-center", className)}
     >
-      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-        {head}
-      </span>
+      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{head}</span>
       <span aria-hidden className="flex-none whitespace-pre">
         {tail}
       </span>

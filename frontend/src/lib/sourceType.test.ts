@@ -19,9 +19,7 @@ describe("inferSourceType", () => {
 
   it("falls back to the MIME type when the extension is uninformative", () => {
     expect(inferSourceType("clipboard", "text/html")).toBe("html");
-    expect(inferSourceType("clipboard", "text/markdown; charset=utf-8")).toBe(
-      "markdown",
-    );
+    expect(inferSourceType("clipboard", "text/markdown; charset=utf-8")).toBe("markdown");
   });
 
   it("returns null when nothing yields a supported type", () => {

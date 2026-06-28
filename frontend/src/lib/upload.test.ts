@@ -1,11 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api";
-import {
-  MAX_UPLOAD_BYTES,
-  runUpload,
-  uploadToS3,
-} from "@/lib/upload";
+import { MAX_UPLOAD_BYTES, runUpload, uploadToS3 } from "@/lib/upload";
 import type { PresignResponse } from "@/lib/types";
 
 interface ProgressEventLike {
@@ -74,12 +70,7 @@ describe("uploadToS3", () => {
     await uploadToS3(presign, file, (p) => progress.push(p.loaded));
 
     // Fields must precede the file; S3 ignores fields that follow it.
-    expect(FakeXHR.lastSentKeys).toEqual([
-      "key",
-      "policy",
-      "x-amz-signature",
-      "file",
-    ]);
+    expect(FakeXHR.lastSentKeys).toEqual(["key", "policy", "x-amz-signature", "file"]);
     expect(progress).toEqual([5, 10]);
   });
 
@@ -138,9 +129,7 @@ describe("runUpload", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("/api/uploads/presign");
     expect(fetchMock.mock.calls[1][0]).toBe("/api/uploads/finalize");
     // Finalize carries only the upload_id (no re-asserted filename/type).
-    const finalizeBody = JSON.parse(
-      (fetchMock.mock.calls[1][1] as RequestInit).body as string,
-    );
+    const finalizeBody = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string);
     expect(finalizeBody).toEqual({ upload_id: "u-1" });
     expect(FakeXHR.lastSentKeys).toContain("file");
   });

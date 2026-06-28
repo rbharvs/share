@@ -17,16 +17,9 @@ import * as path from "node:path";
 import * as cloudflare from "@pulumi/cloudflare";
 import * as pulumi from "@pulumi/pulumi";
 
-import {
-  loadCloudflareConfig,
-  loadDataConfig,
-  loadEdgeConfig,
-} from "./config";
+import { loadCloudflareConfig, loadDataConfig, loadEdgeConfig } from "./config";
 import { createCdnResources } from "./cdn";
-import {
-  createCloudflareAccess,
-  createCloudflareDns,
-} from "./cloudflare";
+import { createCloudflareAccess, createCloudflareDns } from "./cloudflare";
 import { createComputeResources } from "./compute";
 import { createDataResources } from "./data";
 
@@ -115,17 +108,14 @@ export const privateBucketName = data.privateBucket.bucket;
 export const privateBucketArn = data.privateBucket.arn;
 export const publicBucketName = data.publicBucket.bucket;
 export const publicBucketArn = data.publicBucket.arn;
-export const publicBucketRegionalDomainName =
-  data.publicBucket.bucketRegionalDomainName;
+export const publicBucketRegionalDomainName = data.publicBucket.bucketRegionalDomainName;
 
 // --- Compute + CDN stack outputs (consumed by slice 14 Cloudflare wiring) --
 export const lambdaName = compute.lambda.name;
 export const lambdaArn = compute.lambda.arn;
 export const restApiId = compute.restApi.id;
 /** Regional API Gateway domains the private hosts CNAME to (slice 14 DNS). */
-export const apiRegionalDomainNames = compute.customDomains.map(
-  (d) => d.regionalDomainName,
-);
+export const apiRegionalDomainNames = compute.customDomains.map((d) => d.regionalDomainName);
 /** The public host's CloudFront domain (slice 14 DNS-only record target). */
 export const cloudFrontDomainName = cdn.distribution.domainName;
 export const cloudFrontDistributionId = cdn.distribution.id;
