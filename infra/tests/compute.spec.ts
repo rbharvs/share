@@ -7,6 +7,7 @@
  */
 
 import * as aws from "@pulumi/aws";
+import * as cloudflare from "@pulumi/cloudflare";
 import * as pulumi from "@pulumi/pulumi";
 import { expect } from "chai";
 
@@ -47,8 +48,24 @@ describe("compute layer", () => {
         newResource: (args: pulumi.runtime.MockResourceArgs) => ({
           id: `${args.name}-id`,
           // Synthesize an `arn` so computed cross-resource references (access-log
-          // destination, account CloudWatch role) resolve to a string here.
-          state: { arn: `arn:aws:test:::${args.name}`, ...args.inputs },
+          // destination, account CloudWatch role) resolve to a string here; ACM
+          // certs also need the computed domainValidationOptions so the DNS
+          // validation chain resolves under the mock.
+          state: {
+            arn: `arn:aws:test:::${args.name}`,
+            ...(args.type === "aws:acm/certificate:Certificate"
+              ? {
+                  domainValidationOptions: [
+                    {
+                      resourceRecordName: `_val.${args.inputs.domainName}.`,
+                      resourceRecordType: "CNAME",
+                      resourceRecordValue: "_v.acm-validations.aws.",
+                    },
+                  ],
+                }
+              : {}),
+            ...args.inputs,
+          },
         }),
         call: (args: pulumi.runtime.MockCallArgs) => args.inputs,
       },
@@ -77,6 +94,11 @@ describe("compute layer", () => {
         "https://myteam.cloudflareaccess.com/cdn-cgi/access/certs",
       dashboardAudience: "dashboard-aud-tag",
       privateAudience: "private-aud-tag",
+      cloudflareProvider: new cloudflare.Provider("cf", {
+        apiToken: "test-token",
+      }),
+      dashboardZoneId: "test-dashboard-zone",
+      contentZoneId: "test-content-zone",
     });
   });
 

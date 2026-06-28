@@ -21,8 +21,10 @@
  */
 
 import * as aws from "@pulumi/aws";
+import * as cloudflare from "@pulumi/cloudflare";
 import * as pulumi from "@pulumi/pulumi";
 
+import { validateCertificate } from "./certValidation";
 import type { EdgeConfig } from "./config";
 import { PUBLIC_CACHE_CONTROL, SHARED_SECURITY_HEADERS } from "./securityHeaders";
 
@@ -56,6 +58,10 @@ export interface CdnInputs {
   readonly cfg: EdgeConfig;
   readonly provider: aws.Provider;
   readonly publicBucket: aws.s3.BucketV2;
+  /** Cloudflare provider for the ACM validation record. */
+  readonly cloudflareProvider: cloudflare.Provider;
+  /** Cloudflare zone id owning the public host (usercontent.example). */
+  readonly publicZoneId: pulumi.Input<string>;
 }
 
 /**
@@ -99,7 +105,8 @@ function customHeaderItems(): aws.types.input.cloudfront.ResponseHeadersPolicyCu
 }
 
 export function createCdnResources(inputs: CdnInputs): CdnResources {
-  const { cfg, provider, publicBucket } = inputs;
+  const { cfg, provider, publicBucket, cloudflareProvider, publicZoneId } =
+    inputs;
   const opts: pulumi.CustomResourceOptions = { provider };
 
   // OAC: CloudFront signs origin requests with SigV4 so the bucket can stay
@@ -148,6 +155,16 @@ export function createCdnResources(inputs: CdnInputs): CdnResources {
     opts,
   );
 
+  // Lay down the validation CNAME in Cloudflare and gate on issuance; the
+  // distribution attaches the validated arn so it never races a pending cert.
+  const certValidation = validateCertificate({
+    name: "public",
+    certificate,
+    zoneId: publicZoneId,
+    cloudflareProvider,
+    awsProvider: provider,
+  });
+
   const distribution = new aws.cloudfront.Distribution(
     "public",
     {
@@ -182,7 +199,7 @@ export function createCdnResources(inputs: CdnInputs): CdnResources {
         geoRestriction: { restrictionType: "none" },
       },
       viewerCertificate: {
-        acmCertificateArn: certificate.arn,
+        acmCertificateArn: certValidation.certificateArn,
         sslSupportMethod: "sni-only",
         minimumProtocolVersion: "TLSv1.2_2021",
       },

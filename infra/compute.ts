@@ -20,8 +20,10 @@
  */
 
 import * as aws from "@pulumi/aws";
+import * as cloudflare from "@pulumi/cloudflare";
 import * as pulumi from "@pulumi/pulumi";
 
+import { validateCertificate } from "./certValidation";
 import type { EdgeConfig } from "./config";
 import { CLOUDFLARE_IP_RANGES } from "./cloudflareIps";
 
@@ -63,6 +65,13 @@ export interface ComputeInputs {
   readonly accessJwksUrl: pulumi.Input<string>;
   readonly dashboardAudience: pulumi.Input<string>;
   readonly privateAudience: pulumi.Input<string>;
+  // --- ACM DNS validation via Cloudflare -----------------------------------
+  /** Cloudflare provider for the per-host cert validation records. */
+  readonly cloudflareProvider: cloudflare.Provider;
+  /** Zone id for the dashboard host's apex (example.com). */
+  readonly dashboardZoneId: pulumi.Input<string>;
+  /** Zone id for the *.usercontent.example apex (the private host). */
+  readonly contentZoneId: pulumi.Input<string>;
 }
 
 export interface ComputeResources {
@@ -427,11 +436,23 @@ export function createComputeResources(inputs: ComputeInputs): ComputeResources 
       { domainName: host, validationMethod: "DNS" },
       opts,
     );
+    // Resolve the owning Cloudflare zone by apex, validate via DNS, and attach
+    // the ISSUED-gated arn so the custom domain never races a pending cert.
+    const zoneId = host.endsWith("example.com")
+      ? inputs.dashboardZoneId
+      : inputs.contentZoneId;
+    const certValidation = validateCertificate({
+      name: key,
+      certificate,
+      zoneId,
+      cloudflareProvider: inputs.cloudflareProvider,
+      awsProvider: provider,
+    });
     const domain = new aws.apigateway.DomainName(
       `${key}-domain`,
       {
         domainName: host,
-        regionalCertificateArn: certificate.arn,
+        regionalCertificateArn: certValidation.certificateArn,
         endpointConfiguration: { types: "REGIONAL" },
         securityPolicy: "TLS_1_2",
       },

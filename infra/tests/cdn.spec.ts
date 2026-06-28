@@ -7,6 +7,7 @@
  */
 
 import * as aws from "@pulumi/aws";
+import * as cloudflare from "@pulumi/cloudflare";
 import * as pulumi from "@pulumi/pulumi";
 import { expect } from "chai";
 
@@ -47,8 +48,24 @@ describe("public CDN layer", () => {
         newResource: (args: pulumi.runtime.MockResourceArgs) => ({
           id: `${args.name}-id`,
           // Synthesize an `arn` so cross-resource references (e.g. the bucket
-          // policy's `AWS:SourceArn`) resolve to a string under the mock.
-          state: { arn: `arn:aws:test:::${args.name}`, ...args.inputs },
+          // policy's `AWS:SourceArn`) resolve to a string under the mock; ACM
+          // certs also need the computed domainValidationOptions so the DNS
+          // validation chain resolves.
+          state: {
+            arn: `arn:aws:test:::${args.name}`,
+            ...(args.type === "aws:acm/certificate:Certificate"
+              ? {
+                  domainValidationOptions: [
+                    {
+                      resourceRecordName: `_val.${args.inputs.domainName}.`,
+                      resourceRecordType: "CNAME",
+                      resourceRecordValue: "_v.acm-validations.aws.",
+                    },
+                  ],
+                }
+              : {}),
+            ...args.inputs,
+          },
         }),
         call: (args: pulumi.runtime.MockCallArgs) => args.inputs,
       },
@@ -56,12 +73,21 @@ describe("public CDN layer", () => {
       "test",
     );
     const provider = new aws.Provider("aws", { region: "us-east-1" });
+    const cloudflareProvider = new cloudflare.Provider("cf", {
+      apiToken: "test-token",
+    });
     const publicBucket = new aws.s3.BucketV2(
       "public",
       { bucket: "share-public" },
       { provider },
     );
-    cdn = createCdnResources({ cfg: CFG, provider, publicBucket });
+    cdn = createCdnResources({
+      cfg: CFG,
+      provider,
+      publicBucket,
+      cloudflareProvider,
+      publicZoneId: "test-content-zone",
+    });
   });
 
   describe("origin access control", () => {

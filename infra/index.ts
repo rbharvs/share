@@ -47,6 +47,13 @@ const data = createDataResources(loadDataConfig());
 const edgeConfig = loadEdgeConfig();
 const cloudflareConfig = loadCloudflareConfig();
 
+// Cloudflare provider: the API token is a stack secret (falls back to the
+// CLOUDFLARE_API_TOKEN env var if unset). Created first because the CDN + compute
+// layers now lay their ACM DNS-validation records into Cloudflare.
+const cloudflareProvider = new cloudflare.Provider("cloudflare", {
+  apiToken: new pulumi.Config("share").getSecret("cloudflareApiToken"),
+});
+
 // CDN first: the public distribution only needs the (private) public bucket, and
 // the compute layer needs the distribution id/arn (Lambda env + invalidation
 // IAM). data -> cdn -> compute, no cycle.
@@ -54,12 +61,8 @@ const cdn = createCdnResources({
   cfg: edgeConfig,
   provider: data.provider,
   publicBucket: data.publicBucket,
-});
-
-// Cloudflare provider: the API token is a stack secret (falls back to the
-// CLOUDFLARE_API_TOKEN env var if unset). Threaded into both Cloudflare slices.
-const cloudflareProvider = new cloudflare.Provider("cloudflare", {
-  apiToken: new pulumi.Config("share").getSecret("cloudflareApiToken"),
+  cloudflareProvider,
+  publicZoneId: cloudflareConfig.contentZoneId,
 });
 
 // Access apps have no AWS dependency, and the compute Lambda must learn their
@@ -88,6 +91,10 @@ const compute = createComputeResources({
   accessJwksUrl: access.jwksUrl,
   dashboardAudience: access.dashboardAudience,
   privateAudience: access.privateAudience,
+  // ACM DNS validation lands in the matching Cloudflare zone per host apex.
+  cloudflareProvider,
+  dashboardZoneId: cloudflareConfig.dashboardZoneId,
+  contentZoneId: cloudflareConfig.contentZoneId,
 });
 
 // DNS last: the private records target the API Gateway regional domains (built
