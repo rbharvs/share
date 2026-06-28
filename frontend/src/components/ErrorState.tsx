@@ -23,14 +23,14 @@ export function ErrorState({
   return (
     <div
       role="alert"
-      className="flex flex-col items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+      className="flex flex-col items-start gap-3 rounded-none border border-retro-line bg-retro-danger-weak p-4 text-sm text-retro-ink shadow-hard"
     >
       <div className="flex items-center gap-2 font-medium">
         <AlertTriangle className="h-4 w-4" aria-hidden />
         <span>{message}</span>
       </div>
       {apiError && (
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-xs text-red-700/80 dark:text-red-400/80">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-xs text-retro-muted">
           <dt>code</dt>
           <dd>{apiError.code}</dd>
           {apiError.requestId && (

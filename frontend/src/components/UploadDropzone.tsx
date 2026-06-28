@@ -1,6 +1,7 @@
 import { FileUp, UploadCloud, X } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
+import { MiddleTruncate } from "@/components/MiddleTruncate";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import {
@@ -175,20 +176,17 @@ export function UploadDropzone({
           }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
-          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-none border-2 border-dashed p-8 text-center transition-colors ${
             dragging
-              ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
-              : "border-slate-300 hover:border-slate-400 dark:border-slate-700 dark:hover:border-slate-600"
+              ? "border-retro-accent bg-retro-accent-weak"
+              : "border-retro-line/60 hover:border-retro-line"
           }`}
         >
-          <UploadCloud
-            className="h-8 w-8 text-slate-400 dark:text-slate-500"
-            aria-hidden
-          />
+          <UploadCloud className="h-8 w-8 text-retro-faint" aria-hidden />
           <div className="text-sm font-medium">
             Drop files here, or click to choose
           </div>
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-retro-muted">
             HTML or Markdown, up to {MAX_UPLOAD_BYTES / (1024 * 1024)} MB each
           </div>
           <input
@@ -211,18 +209,19 @@ export function UploadDropzone({
               return (
                 <li
                   key={task.id}
-                  className="flex flex-col gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-800"
+                  className="flex flex-col gap-2 rounded-none border border-retro-line bg-retro-surface p-3 shadow-hard"
                 >
                   <div className="flex items-center gap-3">
                     <FileUp
-                      className="h-4 w-4 shrink-0 text-slate-400"
+                      className="h-4 w-4 shrink-0 text-retro-faint"
                       aria-hidden
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">
-                        {task.file.name}
-                      </div>
-                      <div className="text-xs text-slate-500">
+                      <MiddleTruncate
+                        name={task.file.name}
+                        className="text-sm font-medium"
+                      />
+                      <div className="text-xs text-retro-muted">
                         {formatBytes(task.file.size)}
                       </div>
                     </div>
@@ -260,7 +259,7 @@ export function UploadDropzone({
                           type="button"
                           onClick={() => removeTask(task.id)}
                           aria-label={`Remove ${task.file.name}`}
-                          className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                          className="text-retro-faint hover:text-retro-ink"
                         >
                           <X className="h-4 w-4" aria-hidden />
                         </button>
@@ -272,13 +271,13 @@ export function UploadDropzone({
                     <Progress value={task.progress} />
                   )}
                   {oversized && task.status === "staged" && (
-                    <div className="text-xs text-red-600 dark:text-red-400">
+                    <div className="text-xs font-medium text-retro-danger">
                       Too large — exceeds the{" "}
                       {MAX_UPLOAD_BYTES / (1024 * 1024)} MB limit.
                     </div>
                   )}
                   {task.sourceType === null && task.status === "staged" && (
-                    <div className="text-xs text-amber-600 dark:text-amber-400">
+                    <div className="text-xs font-medium text-retro-danger">
                       Couldn&apos;t infer a type — choose one to upload.
                     </div>
                   )}
@@ -289,8 +288,12 @@ export function UploadDropzone({
         )}
 
         {tasks.length > 0 && (
-          <div className="flex items-center gap-3">
-            <Button onClick={uploadAll} disabled={readyCount === 0}>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={uploadAll}
+              disabled={readyCount === 0}
+              className="w-full"
+            >
               <UploadCloud className="h-4 w-4" aria-hidden />
               Upload {readyCount > 0 ? `${readyCount} ` : ""}
               file{readyCount === 1 ? "" : "s"}
@@ -299,6 +302,7 @@ export function UploadDropzone({
               variant="outline"
               onClick={() => setTasks([])}
               disabled={tasks.some((t) => t.status === "uploading")}
+              className="w-full"
             >
               Clear
             </Button>
