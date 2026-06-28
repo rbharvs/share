@@ -73,6 +73,15 @@ These implementation-detail forks were settled with sensible defaults rather tha
 - Per-host Access AUD originates in Cloudflare/Pulumi and is mirrored into backend `AccessConfig` via config (slice 14).
 - SPA-at-`/` may need habit-tracker's trailing-slash `307` shim (decided in slice 09).
 
+## Deployment status
+
+**LIVE (deployed 2026-06-27).** All 14 slices implemented, reviewed, and merged to `main`; the `prod` Pulumi stack is applied to AWS account `123456789012` + Cloudflare. 57 resources, all ACM certs `ISSUED`, CloudFront `Deployed`.
+
+- Hosts: `share.example.com` + `private.usercontent.example` → **302 Cloudflare Access challenge** (gated); `public.usercontent.example` → CloudFront/OAC (never hits Lambda); raw API Gateway invoke → **403** (Cloudflare-IP resource policy). Boundary checks (`scripts/boundary_checks.sh`) pass for the two automatable checks; #1 (in-browser Access login) and #4 (needs a published SHA) are manual.
+- Key identifiers: stack `prod`, secrets provider `awskms://alias/share-pulumi`, REST API `xxxxxxxxxx` (stage `v1`), CloudFront `EXXXXXXXXXXXXX`, buckets `share-private-123456789012` / `share-public-123456789012` (account-suffixed to dodge S3's global namespace).
+- Config overrides applied at deploy: `share:cloudflareTeamDomain=myteam` (the slice-14 default `example` was wrong — issuer must be `https://myteam.cloudflareaccess.com`), and the two account-suffixed bucket names.
+- **Two bugs surfaced only at `pulumi up`** (the mock-based config tests can't validate against the real AWS API), both fixed on `main`: (1) CloudFront `ResponseHeadersPolicy` must declare recognized security headers in `securityHeadersConfig`, not `customHeadersConfig`; (2) the ACM certs had no Cloudflare DNS-validation records or issuance gate, so they sat `PENDING_VALIDATION` — added `certValidation.ts`.
+
 ## Operator prerequisites (deploy bootstrap)
 
 Status of the human/external prerequisites for the infra slices. **Slices 01–11 need none of this** — they run on moto + the local Access proxy. Required only before slices 12–14 `pulumi up`:
