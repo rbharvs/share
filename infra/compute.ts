@@ -177,8 +177,7 @@ export function createComputeResources(inputs: ComputeInputs): ComputeResources 
     "lambda-basic-execution",
     {
       role: role.name,
-      policyArn:
-        "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+      policyArn: "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
     },
     opts,
   );
@@ -371,8 +370,7 @@ export function createComputeResources(inputs: ComputeInputs): ComputeResources 
     "apigw-cloudwatch-attach",
     {
       role: apiGatewayLogRole.name,
-      policyArn:
-        "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs",
+      policyArn: "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs",
     },
     opts,
   );
@@ -446,8 +444,7 @@ export function createComputeResources(inputs: ComputeInputs): ComputeResources 
     // zone. (Keying off the apex breaks the moment the configured hosts differ
     // from the defaults.) Then validate via DNS and attach the ISSUED-gated arn
     // so the custom domain never races a pending cert.
-    const zoneId =
-      key === "dashboard" ? inputs.dashboardZoneId : inputs.contentZoneId;
+    const zoneId = key === "dashboard" ? inputs.dashboardZoneId : inputs.contentZoneId;
     const certValidation = validateCertificate({
       name: key,
       certificate,

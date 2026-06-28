@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-// The dashboard SPA. In `make dev` the browser hits the local Access proxy at
+// The dashboard SPA. In `mise run dev` the browser hits the local Access proxy at
 // share.localhost:5174, which forwards to this Vite server; Vite in turn proxies
 // `/api/*` to FastAPI on :8000, preserving the original Host so FastAPI still
 // classifies the request as the dashboard origin (changeOrigin: false). The
@@ -32,7 +32,7 @@ export default defineConfig({
   },
   build: {
     // Built assets are copied into the backend package (src/share/static) and
-    // are gitignored; FastAPI serves them production-shape under `make preview`.
+    // are gitignored; FastAPI serves them production-shape under `mise run preview`.
     outDir: "dist",
     emptyOutDir: true,
   },

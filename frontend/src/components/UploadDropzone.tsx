@@ -4,22 +4,12 @@ import { useCallback, useRef, useState } from "react";
 import { MiddleTruncate } from "@/components/MiddleTruncate";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { ApiError } from "@/lib/api";
-import {
-  SOURCE_TYPES,
-  SOURCE_TYPE_LABELS,
-  inferSourceType,
-} from "@/lib/sourceType";
+import { SOURCE_TYPES, SOURCE_TYPE_LABELS, inferSourceType } from "@/lib/sourceType";
 import type { ContentItem, SourceType } from "@/lib/types";
 import { MAX_UPLOAD_BYTES, runUpload } from "@/lib/upload";
 import { formatBytes } from "@/lib/utils";
@@ -56,11 +46,7 @@ function stageFile(file: File): UploadTask {
  * items are handed to {@link onUploaded} so the library prepends them; failures
  * surface the structured error `code` + `message` as a toast (no polling).
  */
-export function UploadDropzone({
-  onUploaded,
-}: {
-  onUploaded: (item: ContentItem) => void;
-}) {
+export function UploadDropzone({ onUploaded }: { onUploaded: (item: ContentItem) => void }) {
   const [tasks, setTasks] = useState<UploadTask[]>([]);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -83,11 +69,7 @@ export function UploadDropzone({
   );
 
   const setTaskType = useCallback((id: string, sourceType: SourceType) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, sourceType, inferred: false } : t,
-      ),
-    );
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, sourceType, inferred: false } : t)));
   }, []);
 
   const removeTask = useCallback((id: string) => {
@@ -121,8 +103,7 @@ export function UploadDropzone({
           variant: "error",
           title: `Upload failed: ${task.file.name}`,
           description:
-            apiError?.message ??
-            (err instanceof Error ? err.message : "Something went wrong."),
+            apiError?.message ?? (err instanceof Error ? err.message : "Something went wrong."),
           code: apiError?.code,
         });
       }
@@ -132,21 +113,14 @@ export function UploadDropzone({
 
   const uploadAll = useCallback(() => {
     for (const task of tasks) {
-      if (
-        task.status === "staged" &&
-        task.sourceType &&
-        task.file.size <= MAX_UPLOAD_BYTES
-      ) {
+      if (task.status === "staged" && task.sourceType && task.file.size <= MAX_UPLOAD_BYTES) {
         void runOne(task);
       }
     }
   }, [tasks, runOne]);
 
   const readyCount = tasks.filter(
-    (t) =>
-      t.status === "staged" &&
-      t.sourceType !== null &&
-      t.file.size <= MAX_UPLOAD_BYTES,
+    (t) => t.status === "staged" && t.sourceType !== null && t.file.size <= MAX_UPLOAD_BYTES,
   ).length;
 
   return (
@@ -154,8 +128,7 @@ export function UploadDropzone({
       <CardHeader>
         <CardTitle>Upload</CardTitle>
         <CardDescription>
-          Drag &amp; drop or pick HTML / Markdown files. Override the inferred
-          type if needed.
+          Drag &amp; drop or pick HTML / Markdown files. Override the inferred type if needed.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -183,9 +156,7 @@ export function UploadDropzone({
           }`}
         >
           <UploadCloud className="h-8 w-8 text-retro-faint" aria-hidden />
-          <div className="text-sm font-medium">
-            Drop files here, or click to choose
-          </div>
+          <div className="text-sm font-medium">Drop files here, or click to choose</div>
           <div className="text-xs text-retro-muted">
             HTML or Markdown, up to {MAX_UPLOAD_BYTES / (1024 * 1024)} MB each
           </div>
@@ -212,18 +183,10 @@ export function UploadDropzone({
                   className="flex flex-col gap-2 rounded-none border border-retro-line bg-retro-surface p-3 shadow-hard"
                 >
                   <div className="flex items-center gap-3">
-                    <FileUp
-                      className="h-4 w-4 shrink-0 text-retro-faint"
-                      aria-hidden
-                    />
+                    <FileUp className="h-4 w-4 shrink-0 text-retro-faint" aria-hidden />
                     <div className="min-w-0 flex-1">
-                      <MiddleTruncate
-                        name={task.file.name}
-                        className="text-sm font-medium"
-                      />
-                      <div className="text-xs text-retro-muted">
-                        {formatBytes(task.file.size)}
-                      </div>
+                      <MiddleTruncate name={task.file.name} className="text-sm font-medium" />
+                      <div className="text-xs text-retro-muted">{formatBytes(task.file.size)}</div>
                     </div>
 
                     {task.status === "uploading" ? (
@@ -236,9 +199,7 @@ export function UploadDropzone({
                         <Select
                           id={`type-${task.id}`}
                           value={task.sourceType ?? ""}
-                          onChange={(e) =>
-                            setTaskType(task.id, e.target.value as SourceType)
-                          }
+                          onChange={(e) => setTaskType(task.id, e.target.value as SourceType)}
                           aria-invalid={task.sourceType === null}
                         >
                           {task.sourceType === null && (
@@ -249,9 +210,7 @@ export function UploadDropzone({
                           {SOURCE_TYPES.map((type) => (
                             <option key={type} value={type}>
                               {SOURCE_TYPE_LABELS[type]}
-                              {task.inferred && task.sourceType === type
-                                ? " (inferred)"
-                                : ""}
+                              {task.inferred && task.sourceType === type ? " (inferred)" : ""}
                             </option>
                           ))}
                         </Select>
@@ -267,13 +226,10 @@ export function UploadDropzone({
                     )}
                   </div>
 
-                  {task.status === "uploading" && (
-                    <Progress value={task.progress} />
-                  )}
+                  {task.status === "uploading" && <Progress value={task.progress} />}
                   {oversized && task.status === "staged" && (
                     <div className="text-xs font-medium text-retro-danger">
-                      Too large — exceeds the{" "}
-                      {MAX_UPLOAD_BYTES / (1024 * 1024)} MB limit.
+                      Too large — exceeds the {MAX_UPLOAD_BYTES / (1024 * 1024)} MB limit.
                     </div>
                   )}
                   {task.sourceType === null && task.status === "staged" && (
@@ -289,11 +245,7 @@ export function UploadDropzone({
 
         {tasks.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
-            <Button
-              onClick={uploadAll}
-              disabled={readyCount === 0}
-              className="w-full"
-            >
+            <Button onClick={uploadAll} disabled={readyCount === 0} className="w-full">
               <UploadCloud className="h-4 w-4" aria-hidden />
               Upload {readyCount > 0 ? `${readyCount} ` : ""}
               file{readyCount === 1 ? "" : "s"}

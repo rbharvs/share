@@ -1,0 +1,209 @@
+# Root tool-version source of truth + task runner for the share monorepo.
+# Replaces the old root Makefile (deleted). Run `mise tasks` to list tasks.
+#
+# Tooling split:
+#   - mise pins every dev tool version (node/python/uv/pulumi/hk/oxlint/oxfmt)
+#     and reproduces them via mise.lock.
+#   - ruff (Python lint/format) stays in the backend uv `dev` group, invoked
+#     through `uv run` -- a single source of truth, NOT duplicated here.
+#   - hk (pinned below) runs the git pre-commit / pre-push hooks; see hk.pkl.
+#
+# SECURITY: this file is committed. Never put AWS account/zone ids, real
+# hostnames, the Cloudflare token, or any secret in [env] or a task. Those live
+# only in the gitignored infra/Pulumi.prod.yaml.
+
+[tools]
+node = "24"
+python = "3.13"
+uv = "0.11.24"
+"aqua:pulumi/pulumi" = "3.248.0" # fully-qualified key forces the aqua backend (not the asdf fallback); pinned to the CLI that created the current stack state
+hk = "1.48.0"
+oxlint = "1.71.0"
+oxfmt = "0.56.0" # pre-1.0 beta: pinned exact + locked so formatting output stays stable; bumped deliberately via Renovate
+
+[settings]
+# Lockfiles are on by default; stated explicitly. The lock is produced by
+# `mise lock --platform linux-x64,macos-arm64`, NOT merely by this flag.
+lockfile = true
+# Don't let a stray .python-version / .nvmrc override the pins above.
+idiomatic_version_file_enable_tools = []
+
+[env]
+# uv does NOT auto-adopt mise's managed Python; without this it may fall back to
+# a self-managed interpreter of a different 3.x. Pin uv to python 3.13 and prefer
+# the interpreter on PATH (the mise-provided one) over a uv-downloaded one, so
+# `uv run`/`uv sync` build the backend venv on the mise python. These are STATIC
+# values (no `{{tools.*}}` template) so mise can evaluate them before the tools
+# are installed -- the templated path form breaks `mise env` in CI when the
+# action runs with install:false (python not yet present). The Lambda vendor
+# step in scripts/build_lambda.py passes explicit --python-version 3.12, so it
+# still cross-targets the 3.12 runtime regardless of this.
+UV_PYTHON = "3.13"
+UV_PYTHON_PREFERENCE = "system"
+# Belt-and-suspenders so hk resolves mise-managed tools even in an unactivated
+# shell; the primary mechanism is `hk install --mise`.
+HK_MISE = "1"
+# Installs/runs use the committed backend/uv.lock exactly -- never silently
+# re-resolve to newer (possibly <72h) versions. The lock is updated only
+# deliberately via `mise run relock` (which overrides this). NOTE: UV_FROZEN=1
+# also degrades `uv lock --check` to a structure-only no-op, so the `lock-check`
+# task below sets UV_FROZEN=0 to actually verify lock<->pyproject sync.
+UV_FROZEN = "1"
+
+# --- Aggregate targets (was: make test / check / format / fix) ---
+
+[tasks.test]
+description = "Run all test suites (backend pytest + infra mocha)"
+depends = ["backend:test", "infra:test"]
+
+[tasks.check]
+description = "Lint + typecheck everything"
+depends = ["backend:check", "frontend:check", "infra:check", "lint", "fmt-check", "lock-check"]
+
+[tasks."lock-check"]
+description = "Verify backend/uv.lock is in sync with pyproject.toml"
+dir = "backend"
+# UV_FROZEN=1 degrades `uv lock --check` to a no-op, so override it here to get
+# a real up-to-date check (fails if pyproject drifts from the lock).
+env = { UV_FROZEN = "0" }
+run = "uv lock --check"
+
+[tasks.format]
+description = "Format all code (ruff for Python, oxfmt for TS/JS)"
+run = [
+  "cd backend && uv run ruff format .",
+  "oxfmt frontend infra",
+]
+
+[tasks.fix]
+description = "Auto-fix lint + format (order matters: ruff fix -> format, then oxc)"
+run = [
+  "cd backend && uv run ruff check --fix . && uv run ruff format .",
+  "oxlint --fix frontend infra",
+  "oxfmt frontend infra",
+]
+
+# --- Backend (uv) ---
+
+[tasks."backend:test"]
+description = "Backend pytest (also builds a real Lambda zip + downloads arm64 wheels)"
+dir = "backend"
+run = "uv run pytest"
+
+[tasks."backend:check"]
+description = "Backend lint + format check (ruff)"
+dir = "backend"
+run = "uv run ruff check . && uv run ruff format --check ."
+
+# --- Frontend (npm + vite) ---
+
+[tasks."frontend:check"]
+description = "Frontend typecheck (tsc -b --noEmit)"
+dir = "frontend"
+run = "npm run typecheck"
+
+[tasks."frontend:build"]
+description = "Build the SPA and copy the bundle into the backend static dir"
+dir = "frontend"
+run = """
+npm run build
+rm -rf ../backend/src/share/static
+mkdir -p ../backend/src/share/static
+cp -R dist/. ../backend/src/share/static/
+"""
+
+# --- Infra (Pulumi TypeScript) ---
+
+[tasks."infra:check"]
+description = "Infra typecheck (tsc --noEmit)"
+dir = "infra"
+run = "npm run typecheck"
+
+[tasks."infra:test"]
+description = "Infra config checks (Pulumi program under mocha mocks, no AWS)"
+dir = "infra"
+run = "npm test"
+
+# --- TS/JS lint + format (oxc); backend Python stays on ruff ---
+
+[tasks.lint]
+description = "oxlint over frontend + infra (config: .oxlintrc.json)"
+run = "oxlint frontend infra"
+
+[tasks.fmt-check]
+description = "oxfmt --check over frontend + infra TS/JS (non-mutating)"
+run = "oxfmt --check frontend infra"
+
+# --- Local dev / preview (multi-process; verbatim process-group teardown) ---
+
+[tasks.dev]
+description = "FastAPI + Vite + the local Access proxy together (local dev)"
+# raw connects stdin/stdout/stderr straight to the terminal; the trap kills the
+# whole process group on Ctrl-C/exit so all three servers tear down together.
+raw = true
+run = """
+set -uo pipefail
+echo "share dev: FastAPI :8000  |  Vite :5173  |  Access proxy share.localhost:5174 + private.localhost:5175"
+echo "Open http://share.localhost:5174"
+trap 'kill 0' INT TERM EXIT
+( cd backend && uv run --group dev uvicorn share.dev_app:app --reload --port 8000 ) &
+( cd frontend && npm run dev ) &
+( cd backend && uv run --group dev python -m share.devproxy ) &
+wait
+"""
+
+[tasks.preview]
+description = "Build the SPA and serve it through FastAPI, production-shape (no Vite)"
+depends = ["frontend:build"]
+raw = true
+run = """
+set -uo pipefail
+echo "share preview: FastAPI serves the built SPA at http://share.localhost:5174"
+trap 'kill 0' INT TERM EXIT
+( cd backend && uv run --group dev uvicorn share.dev_app:app --port 8000 ) &
+( cd backend && SHARE_DASHBOARD_UPSTREAM=http://127.0.0.1:8000 uv run --group dev python -m share.devproxy ) &
+wait
+"""
+
+# --- Packaging (single Lambda zip Pulumi consumes) ---
+
+[tasks.build]
+description = "Build the single Lambda deployment zip for Pulumi"
+depends = ["frontend:build"]
+dir = "backend"
+# Vendors deps for python3.12 / arm64 even though the host runs python3.13;
+# build_lambda.py passes explicit --python-version 3.12 --python-platform ...
+run = "uv run python ../scripts/build_lambda.py --skip-frontend"
+
+# --- Deploy (manual, gated; NEVER referenced from any CI workflow) ---
+
+[tasks."infra-preview"]
+description = "Operator-only preview of the real create/update diff"
+depends = ["build"]
+dir = "infra"
+run = "pulumi preview"
+
+[tasks.deploy]
+description = "Manual production deploy: tests + build, then gated `pulumi up`"
+depends = ["test", "build"]
+dir = "infra"
+# raw so pulumi's interactive yes/no prompt (the manual gate) reads real stdin.
+# No --yes, no --stack. Enforcement that this never runs in CI is structural:
+# no workflow references it.
+raw = true
+run = "pulumi up"
+
+[tasks."boundary-checks"]
+description = "Post-deploy boundary curls (run after an apply)"
+run = "./scripts/boundary_checks.sh"
+
+# --- Supply-chain maintenance ---
+
+[tasks.relock]
+description = "Re-lock backend deps honoring the 72h supply-chain floor (uv >= 0.9.17)"
+dir = "backend"
+# Override the repo-wide UV_FROZEN so this task is allowed to update the lock.
+# wenmode (trusted renderer) and syrupy (dev-only; latest fixed release is <72h
+# after an upstream version mishap) are documented exceptions to the 72h floor.
+env = { UV_FROZEN = "0" }
+run = "uv lock --upgrade --exclude-newer '3 days' --exclude-newer-package 'wenmode=2026-06-28T23:59:59Z' --exclude-newer-package 'syrupy=2026-06-28T23:59:59Z'"

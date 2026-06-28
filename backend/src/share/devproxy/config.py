@@ -26,7 +26,7 @@ PRIVATE_PROXY_PORT = 5175
 
 #: Where each proxy listener forwards by default. The dashboard proxy fronts the
 #: Vite dev server (which itself proxies ``/api/*`` to FastAPI); the private
-#: proxy fronts FastAPI directly. ``make preview`` overrides the dashboard
+#: proxy fronts FastAPI directly. ``mise run preview`` overrides the dashboard
 #: upstream to FastAPI so the built SPA is served production-shape.
 VITE_DEV_URL = "http://127.0.0.1:5173"
 FASTAPI_URL = "http://127.0.0.1:8000"

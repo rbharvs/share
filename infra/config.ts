@@ -55,11 +55,8 @@ export function loadDataConfig(): DataConfig {
     ttlAttribute: cfg.get("ttlAttribute") ?? DATA_DEFAULTS.ttlAttribute,
     privateBucket: cfg.get("privateBucket") ?? DATA_DEFAULTS.privateBucket,
     publicBucket: cfg.get("publicBucket") ?? DATA_DEFAULTS.publicBucket,
-    dashboardOrigins:
-      cfg.getObject<string[]>("dashboardOrigins") ??
-      DATA_DEFAULTS.dashboardOrigins,
-    tmpExpirationDays:
-      cfg.getNumber("tmpExpirationDays") ?? DATA_DEFAULTS.tmpExpirationDays,
+    dashboardOrigins: cfg.getObject<string[]>("dashboardOrigins") ?? DATA_DEFAULTS.dashboardOrigins,
+    tmpExpirationDays: cfg.getNumber("tmpExpirationDays") ?? DATA_DEFAULTS.tmpExpirationDays,
   };
 }
 
@@ -118,14 +115,11 @@ export function loadEdgeConfig(): EdgeConfig {
     dashboardHost: cfg.get("dashboardHost") ?? EDGE_DEFAULTS.dashboardHost,
     privateHost: cfg.get("privateHost") ?? EDGE_DEFAULTS.privateHost,
     publicHost: cfg.get("publicHost") ?? EDGE_DEFAULTS.publicHost,
-    lambdaMemoryMb:
-      cfg.getNumber("lambdaMemoryMb") ?? EDGE_DEFAULTS.lambdaMemoryMb,
+    lambdaMemoryMb: cfg.getNumber("lambdaMemoryMb") ?? EDGE_DEFAULTS.lambdaMemoryMb,
     lambdaTimeoutSeconds:
-      cfg.getNumber("lambdaTimeoutSeconds") ??
-      EDGE_DEFAULTS.lambdaTimeoutSeconds,
+      cfg.getNumber("lambdaTimeoutSeconds") ?? EDGE_DEFAULTS.lambdaTimeoutSeconds,
     lambdaHandler: cfg.get("lambdaHandler") ?? EDGE_DEFAULTS.lambdaHandler,
-    logRetentionDays:
-      cfg.getNumber("logRetentionDays") ?? EDGE_DEFAULTS.logRetentionDays,
+    logRetentionDays: cfg.getNumber("logRetentionDays") ?? EDGE_DEFAULTS.logRetentionDays,
   };
 }
 
@@ -191,20 +185,13 @@ export function loadCloudflareConfig(): CloudflareConfig {
 
   return {
     accountId: cfg.get("cloudflareAccountId") ?? CLOUDFLARE_DEFAULTS.accountId,
-    dashboardZoneId:
-      cfg.get("dashboardZoneId") ??
-      CLOUDFLARE_DEFAULTS.dashboardZoneId,
-    contentZoneId:
-      cfg.get("contentZoneId") ??
-      CLOUDFLARE_DEFAULTS.contentZoneId,
+    dashboardZoneId: cfg.get("dashboardZoneId") ?? CLOUDFLARE_DEFAULTS.dashboardZoneId,
+    contentZoneId: cfg.get("contentZoneId") ?? CLOUDFLARE_DEFAULTS.contentZoneId,
     dashboardHost: cfg.get("dashboardHost") ?? CLOUDFLARE_DEFAULTS.dashboardHost,
     privateHost: cfg.get("privateHost") ?? CLOUDFLARE_DEFAULTS.privateHost,
     publicHost: cfg.get("publicHost") ?? CLOUDFLARE_DEFAULTS.publicHost,
-    allowedOwnerEmail:
-      cfg.get("allowedOwnerEmail") ?? CLOUDFLARE_DEFAULTS.allowedOwnerEmail,
-    teamDomain:
-      cfg.get("cloudflareTeamDomain") ?? CLOUDFLARE_DEFAULTS.teamDomain,
-    sessionDuration:
-      cfg.get("accessSessionDuration") ?? CLOUDFLARE_DEFAULTS.sessionDuration,
+    allowedOwnerEmail: cfg.get("allowedOwnerEmail") ?? CLOUDFLARE_DEFAULTS.allowedOwnerEmail,
+    teamDomain: cfg.get("cloudflareTeamDomain") ?? CLOUDFLARE_DEFAULTS.teamDomain,
+    sessionDuration: cfg.get("accessSessionDuration") ?? CLOUDFLARE_DEFAULTS.sessionDuration,
   };
 }

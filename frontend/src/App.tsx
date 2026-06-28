@@ -23,9 +23,7 @@ export default function App() {
               <h1 className="font-mono text-xl font-bold uppercase tracking-[0.3em] text-retro-ink">
                 share
               </h1>
-              <p className="text-sm text-retro-muted">
-                Personal sharing dashboard
-              </p>
+              <p className="text-sm text-retro-muted">Personal sharing dashboard</p>
             </div>
           </div>
         </header>

@@ -23,9 +23,11 @@ afterEach(() => {
 
 describe("dashboard POST helpers", () => {
   it("sends the CSRF header, POST method and a relative URL", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ upload_id: "u1", url: "https://s3", fields: {}, max_size_bytes: 1 }),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ upload_id: "u1", url: "https://s3", fields: {}, max_size_bytes: 1 }),
+      );
     vi.stubGlobal("fetch", fetchMock);
 
     await presignUpload({ filename: "a.html", source_type: "html" });

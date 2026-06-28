@@ -61,9 +61,7 @@ describe("cloudflare layer", () => {
 
   describe("issuer/JWKS derivation", () => {
     it("derives the cloudflareaccess issuer from the team domain", () => {
-      expect(accessIssuer("myteam")).to.equal(
-        "https://myteam.cloudflareaccess.com",
-      );
+      expect(accessIssuer("myteam")).to.equal("https://myteam.cloudflareaccess.com");
     });
 
     it("appends the Access certs path for the JWKS url", () => {
@@ -109,12 +107,8 @@ describe("cloudflare layer", () => {
     });
 
     it("uses a 7-day session on both apps", async () => {
-      expect(await promiseOf(access.dashboardApp.sessionDuration)).to.equal(
-        "168h",
-      );
-      expect(await promiseOf(access.privateApp.sessionDuration)).to.equal(
-        "168h",
-      );
+      expect(await promiseOf(access.dashboardApp.sessionDuration)).to.equal("168h");
+      expect(await promiseOf(access.privateApp.sessionDuration)).to.equal("168h");
       expect(SESSION_DURATION_7_DAYS).to.equal("168h");
     });
 
@@ -122,19 +116,13 @@ describe("cloudflare layer", () => {
       for (const policy of [access.dashboardPolicy, access.privatePolicy]) {
         expect(await promiseOf(policy.decision)).to.equal("allow");
         const includes = await promiseOf(policy.includes);
-        expect(includes?.[0]?.email?.email).to.equal(
-          "owner@example.com",
-        );
+        expect(includes?.[0]?.email?.email).to.equal("owner@example.com");
       }
     });
 
     it("surfaces the derived issuer + JWKS for the verifier to mirror", () => {
-      expect(access.issuer).to.equal(
-        "https://myteam.cloudflareaccess.com",
-      );
-      expect(access.jwksUrl).to.equal(
-        "https://myteam.cloudflareaccess.com/cdn-cgi/access/certs",
-      );
+      expect(access.issuer).to.equal("https://myteam.cloudflareaccess.com");
+      expect(access.jwksUrl).to.equal("https://myteam.cloudflareaccess.com/cdn-cgi/access/certs");
     });
   });
 
@@ -163,26 +151,14 @@ describe("cloudflare layer", () => {
     it("keeps the public host DNS-only to CloudFront (never hits Lambda)", async () => {
       expect(await promiseOf(dns.publicRecord.proxied)).to.equal(false);
       expect(await promiseOf(dns.publicRecord.ttl)).to.equal(DNS_ONLY_TTL);
-      expect(await promiseOf(dns.publicRecord.content)).to.equal(
-        "d111.cloudfront.net",
-      );
+      expect(await promiseOf(dns.publicRecord.content)).to.equal("d111.cloudfront.net");
     });
 
     it("places each record in the correct zone as a CNAME", async () => {
-      expect(await promiseOf(dns.dashboardRecord.zoneId)).to.equal(
-        "zone-dashboard",
-      );
-      expect(await promiseOf(dns.privateRecord.zoneId)).to.equal(
-        "zone-content",
-      );
-      expect(await promiseOf(dns.publicRecord.zoneId)).to.equal(
-        "zone-content",
-      );
-      for (const record of [
-        dns.dashboardRecord,
-        dns.privateRecord,
-        dns.publicRecord,
-      ]) {
+      expect(await promiseOf(dns.dashboardRecord.zoneId)).to.equal("zone-dashboard");
+      expect(await promiseOf(dns.privateRecord.zoneId)).to.equal("zone-content");
+      expect(await promiseOf(dns.publicRecord.zoneId)).to.equal("zone-content");
+      for (const record of [dns.dashboardRecord, dns.privateRecord, dns.publicRecord]) {
         expect(await promiseOf(record.type)).to.equal(CNAME);
       }
     });

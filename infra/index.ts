@@ -7,7 +7,7 @@
  *   - slice 14: Cloudflare Access apps (whose AUDs feed the Lambda env) +
  *     Cloudflare DNS records (private hosts proxied, public host DNS-only)
  *
- * The Lambda is deployed from the PREBUILT zip emitted by `make build`
+ * The Lambda is deployed from the PREBUILT zip emitted by `mise run build`
  * (`backend/dist/lambda.zip`). Pulumi treats it as an opaque input — no frontend
  * build, no dependency vendoring, and no Docker happen during `pulumi preview`.
  */
@@ -17,22 +17,15 @@ import * as path from "node:path";
 import * as cloudflare from "@pulumi/cloudflare";
 import * as pulumi from "@pulumi/pulumi";
 
-import {
-  loadCloudflareConfig,
-  loadDataConfig,
-  loadEdgeConfig,
-} from "./config";
+import { loadCloudflareConfig, loadDataConfig, loadEdgeConfig } from "./config";
 import { createCdnResources } from "./cdn";
-import {
-  createCloudflareAccess,
-  createCloudflareDns,
-} from "./cloudflare";
+import { createCloudflareAccess, createCloudflareDns } from "./cloudflare";
 import { createComputeResources } from "./compute";
 import { createDataResources } from "./data";
 
 /**
  * Absolute path to the single Lambda deployment artifact produced by
- * `make build`. Slice 13 wraps this in a `pulumi.asset.FileArchive`; surfacing
+ * `mise run build`. Slice 13 wraps this in a `pulumi.asset.FileArchive`; surfacing
  * it here keeps the build/deploy contract in one obvious place.
  */
 export const lambdaArtifactPath: string = path.resolve(
@@ -115,17 +108,14 @@ export const privateBucketName = data.privateBucket.bucket;
 export const privateBucketArn = data.privateBucket.arn;
 export const publicBucketName = data.publicBucket.bucket;
 export const publicBucketArn = data.publicBucket.arn;
-export const publicBucketRegionalDomainName =
-  data.publicBucket.bucketRegionalDomainName;
+export const publicBucketRegionalDomainName = data.publicBucket.bucketRegionalDomainName;
 
 // --- Compute + CDN stack outputs (consumed by slice 14 Cloudflare wiring) --
 export const lambdaName = compute.lambda.name;
 export const lambdaArn = compute.lambda.arn;
 export const restApiId = compute.restApi.id;
 /** Regional API Gateway domains the private hosts CNAME to (slice 14 DNS). */
-export const apiRegionalDomainNames = compute.customDomains.map(
-  (d) => d.regionalDomainName,
-);
+export const apiRegionalDomainNames = compute.customDomains.map((d) => d.regionalDomainName);
 /** The public host's CloudFront domain (slice 14 DNS-only record target). */
 export const cloudFrontDomainName = cdn.distribution.domainName;
 export const cloudFrontDistributionId = cdn.distribution.id;

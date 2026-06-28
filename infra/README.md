@@ -12,7 +12,7 @@ Pulumi TypeScript managing AWS + Cloudflare.
   distribution + ACM in `cdn.ts`.
 - **Slice 14 (done):** Cloudflare DNS + Zero Trust Access + the manual deploy
   runbook. See `cloudflare.ts` (records + Access apps), the AccessConfig
-  mirroring wired through `compute.ts`'s Lambda env, and `make deploy` /
+  mirroring wired through `compute.ts`'s Lambda env, and `mise run deploy` /
   `scripts/boundary_checks.sh`.
 
 ## Layout
@@ -49,8 +49,8 @@ Pulumi TypeScript managing AWS + Cloudflare.
 ## Validate
 
 ```sh
-npm run typecheck   # tsc --noEmit  (make infra-check)
-npm test            # config checks under Pulumi mocks  (make infra-test)
+npm run typecheck   # tsc --noEmit  (mise run infra:check)
+npm test            # config checks under Pulumi mocks  (mise run infra:test)
 ```
 
 Both run in CI. A real `pulumi preview` (operator step, needs the
@@ -112,7 +112,7 @@ runs typecheck + the config checks; it never holds AWS/Cloudflare credentials
 and never applies). The one gated path:
 
 ```sh
-make deploy        # runs `make test` + `make build`, then interactive `pulumi up`
+mise run deploy        # runs `mise run test` + `mise run build`, then interactive `pulumi up`
 ```
 
 `pulumi up`'s own yes/no confirmation is the manual gate. The build runs first
@@ -126,13 +126,13 @@ pulumi config set share:dashboardZoneId       <example.com zone id>
 pulumi config set share:contentZoneId    <usercontent.example zone id>
 pulumi config set share:cloudflareTeamDomain      <team-slug>      # → issuer
 pulumi config set --secret share:cloudflareApiToken <token>        # or CLOUDFLARE_API_TOKEN
-# `make infra-preview` shows the real create/update diff before applying.
+# `mise run infra-preview` shows the real create/update diff before applying.
 ```
 
 After the apply, exercise the deployed ingress boundaries (story 42):
 
 ```sh
-make boundary-checks    # see scripts/boundary_checks.sh
+mise run boundary-checks    # see scripts/boundary_checks.sh
 ```
 
 It asserts: a raw API Gateway invoke from a non-Cloudflare IP → 403;

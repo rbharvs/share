@@ -12,6 +12,7 @@ The build shells out to ``uv``; it is skipped when ``uv`` is unavailable.
 from __future__ import annotations
 
 import importlib.util
+import re
 import shutil
 import zipfile
 from pathlib import Path
@@ -108,6 +109,28 @@ def test_zip_vendors_cryptography_for_arm64(lambda_zip: Path, names: list[str]) 
                 f"{name} is built for machine 0x{e_machine:02x}, not AArch64 "
                 f"(0x{_EM_AARCH64:02x}); wrong-platform wheel vendored"
             )
+
+    # Pin the *interpreter ABI* to the Lambda runtime, not the build host. The
+    # build host runs python 3.13, but the Lambda runtime is python3.12 and
+    # build_lambda cross-targets it via ``--python-version``. A regression that
+    # dropped that flag (or let UV_PYTHON leak) would vendor cp313 extensions —
+    # still AArch64 ELF, so the e_machine check above would not catch them — that
+    # cannot import on the python3.12 Lambda. Guard the ``cpython-3XX`` tag so
+    # this stays pinned to LAMBDA_PYTHON_VERSION.
+    expected_minor = _load_build_module().LAMBDA_PYTHON_VERSION.split(".")[1]
+    expected_tag = f"cpython-3{expected_minor}"
+    tagged = [m.group(0) for n in so_names if (m := re.search(r"cpython-3\d+", n))]
+    wrong = sorted({t for t in tagged if t != expected_tag})
+    assert not wrong, (
+        f"vendored native extensions built for the wrong CPython ABI {wrong}; "
+        f"expected {expected_tag} (Lambda runtime is python3.{expected_minor})"
+    )
+    # ...and at least one interpreter-tagged extension proves we really vendored
+    # version-specific wheels (abi3-only would silently pass the check above).
+    assert any(expected_tag in n for n in so_names), (
+        f"no {expected_tag} extension found among {so_names}; "
+        "cross-target may have produced only abi3 wheels or mis-resolved"
+    )
 
 
 def test_zip_excludes_dev_dependencies_and_bytecode(names: list[str]) -> None:

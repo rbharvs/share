@@ -4,5 +4,5 @@ description: >-
   Infrastructure for the share personal sharing service (AWS + Cloudflare).
   Data (DynamoDB + S3) lands in slice 12, compute + CDN (Lambda + API Gateway +
   CloudFront/OAC + ACM) in slice 13, and Cloudflare DNS/Access + production
-  deploy wiring in slice 14. Lambda consumes the prebuilt zip from `make build`;
+  deploy wiring in slice 14. Lambda consumes the prebuilt zip from `mise run build`;
   no build work happens during `pulumi preview`.

@@ -56,9 +56,7 @@ describe("data layer", () => {
   describe("DynamoDB single table", () => {
     it("uses PAY_PER_REQUEST with the pk/sk single-table keys", async () => {
       expect(await promiseOf(data.table.name)).to.equal("share");
-      expect(await promiseOf(data.table.billingMode)).to.equal(
-        "PAY_PER_REQUEST",
-      );
+      expect(await promiseOf(data.table.billingMode)).to.equal("PAY_PER_REQUEST");
       expect(await promiseOf(data.table.hashKey)).to.equal(TABLE_HASH_KEY);
       expect(await promiseOf(data.table.rangeKey)).to.equal(TABLE_RANGE_KEY);
 
@@ -94,17 +92,12 @@ describe("data layer", () => {
       for (const sse of [data.privateBucketSse, data.publicBucketSse]) {
         const rules = (await promiseOf(sse.rules)) ?? [];
         expect(rules).to.have.length(1);
-        expect(
-          rules[0].applyServerSideEncryptionByDefault?.sseAlgorithm,
-        ).to.equal("AES256");
+        expect(rules[0].applyServerSideEncryptionByDefault?.sseAlgorithm).to.equal("AES256");
       }
     });
 
     it("leaves both buckets unversioned", async () => {
-      for (const v of [
-        data.privateBucketVersioning,
-        data.publicBucketVersioning,
-      ]) {
+      for (const v of [data.privateBucketVersioning, data.publicBucketVersioning]) {
         const cfg = await promiseOf(v.versioningConfiguration);
         expect(cfg.status).to.equal("Disabled");
       }
@@ -136,9 +129,7 @@ describe("data layer", () => {
 
       const rule = corsRules[0];
       expect(rule.allowedMethods).to.deep.equal(["POST"]);
-      expect(rule.allowedOrigins).to.deep.equal([
-        "https://share.example.com",
-      ]);
+      expect(rule.allowedOrigins).to.deep.equal(["https://share.example.com"]);
       // Defense-in-depth: never a wildcard origin on the upload surface.
       expect(rule.allowedOrigins).to.not.include("*");
     });
@@ -146,10 +137,7 @@ describe("data layer", () => {
 
   describe("public access blocking", () => {
     it("blocks all public access on both buckets (public bucket = OAC-only)", async () => {
-      for (const block of [
-        data.privateBucketAccessBlock,
-        data.publicBucketAccessBlock,
-      ]) {
+      for (const block of [data.privateBucketAccessBlock, data.publicBucketAccessBlock]) {
         expect(await promiseOf(block.blockPublicAcls)).to.equal(true);
         expect(await promiseOf(block.blockPublicPolicy)).to.equal(true);
         expect(await promiseOf(block.ignorePublicAcls)).to.equal(true);

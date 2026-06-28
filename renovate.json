@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
+  "lockFileMaintenance": { "enabled": true },
+  "packageRules": [
+    {
+      "description": "oxfmt is pre-1.0 beta; its formatting output can shift between releases. Isolate its bumps so a reformat diff is reviewed on its own.",
+      "matchManagers": ["mise"],
+      "matchPackageNames": ["oxfmt"],
+      "groupName": "oxfmt (beta formatter)"
+    },
+    {
+      "description": "Pin Pulumi CLI to the version that created the deployed stack state; review CLI bumps deliberately (a newer CLI can rewrite state format).",
+      "matchManagers": ["mise"],
+      "matchPackageNames": ["aqua:pulumi/pulumi", "pulumi"],
+      "dependencyDashboardApproval": true
+    }
+  ]
+}

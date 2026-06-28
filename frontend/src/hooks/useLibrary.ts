@@ -3,12 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchContent } from "@/lib/api";
 import type { ContentItem } from "@/lib/types";
 
-export type LibraryState =
-  | "idle"
-  | "loading"
-  | "loading-more"
-  | "error"
-  | "ready";
+export type LibraryState = "idle" | "loading" | "loading-more" | "error" | "ready";
 
 export interface Library {
   items: ContentItem[];
@@ -50,18 +45,11 @@ export function useLibrary(): Library {
   }, []);
 
   const prepend = useCallback((item: ContentItem) => {
-    setItems((prev) => [
-      item,
-      ...prev.filter((existing) => existing.sha256 !== item.sha256),
-    ]);
+    setItems((prev) => [item, ...prev.filter((existing) => existing.sha256 !== item.sha256)]);
   }, []);
 
   const replace = useCallback((item: ContentItem) => {
-    setItems((prev) =>
-      prev.map((existing) =>
-        existing.sha256 === item.sha256 ? item : existing,
-      ),
-    );
+    setItems((prev) => prev.map((existing) => (existing.sha256 === item.sha256 ? item : existing)));
   }, []);
 
   useEffect(() => {

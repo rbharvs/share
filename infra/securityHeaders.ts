@@ -19,8 +19,7 @@
  * `share.content.headers.SHARED_SECURITY_HEADERS`.
  */
 export const SHARED_SECURITY_HEADERS: Readonly<Record<string, string>> = {
-  "Content-Security-Policy":
-    "sandbox allow-scripts allow-forms allow-popups allow-downloads",
+  "Content-Security-Policy": "sandbox allow-scripts allow-forms allow-popups allow-downloads",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "no-referrer",
   "X-Robots-Tag": "noindex, nofollow",

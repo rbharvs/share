@@ -8,17 +8,10 @@ import { ApiError } from "@/lib/api";
  * `code` and the `request_id` for support, exactly as the backend envelope
  * provides them. Falls back gracefully for non-API errors.
  */
-export function ErrorState({
-  error,
-  onRetry,
-}: {
-  error: unknown;
-  onRetry: () => void;
-}) {
+export function ErrorState({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   const apiError = error instanceof ApiError ? error : null;
   const message =
-    apiError?.message ??
-    (error instanceof Error ? error.message : "Something went wrong.");
+    apiError?.message ?? (error instanceof Error ? error.message : "Something went wrong.");
 
   return (
     <div

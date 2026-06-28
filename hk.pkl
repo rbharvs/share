@@ -1,0 +1,107 @@
+// Git hooks for the share monorepo, managed by hk (jdx/hk), pinned in mise.toml.
+// Evaluated by hk's bundled pure-Rust pklr backend -- no external pkl CLI needed
+// (set HK_PKL_BACKEND=pkl only as an escape hatch). Install the hooks with
+// `hk install --mise` so they resolve mise-managed tool versions.
+//
+// Tooling split (matches mise.toml):
+//   - Python: ruff (lint + format), run through the backend's uv project so the
+//     uv-pinned ruff is the single source of truth (NOT a mise-installed ruff).
+//   - TS/JS: oxlint + oxfmt (oxc), scoped to frontend/ + infra/ only. oxfmt's
+//     builtin would also format JSON/YAML/TOML/MD/CSS by default; we deliberately
+//     narrow it to TS/JS so a pre-1.0 formatter never rewrites secret-adjacent
+//     Pulumi YAML, package.json, or the example config.
+//   - Typecheck: each workspace's own `npm run typecheck` (project-scoped tsc),
+//     not the per-file tsc builtin.
+//
+// Hook split: pre-commit = fast auto-fixers on staged files; pre-push =
+// read-only project checks incl. typecheck. Full test suites (pytest/mocha/
+// vitest) are intentionally left to CI, not the hooks.
+//
+// SECURITY: committed file -- contains no ids, tokens, hostnames, or secrets.
+amends "package://github.com/jdx/hk/releases/download/v1.48.0/hk@1.48.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.48.0/hk@1.48.0#/Builtins.pkl"
+
+// --- Python (ruff via the backend uv project) ---
+
+local ruffLint = (Builtins.ruff) {
+  glob = List("backend/**/*.py", "backend/**/*.pyi")
+  prefix = "uv run --project backend --"
+}
+local ruffFormat = (Builtins.ruff_format) {
+  glob = List("backend/**/*.py", "backend/**/*.pyi")
+  prefix = "uv run --project backend --"
+}
+
+// --- TS/JS (oxc), scoped to frontend/ + infra/ ---
+
+local oxlint = (Builtins.ox_lint) {
+  glob = List("frontend/**/*.{ts,tsx,js,jsx,mjs,cjs}", "infra/**/*.ts")
+  exclude = List("**/node_modules/**", "**/dist/**", "backend/**")
+}
+// Narrow oxfmt to TS/JS only (override the builtin's broad multi-format glob).
+local oxfmt = (Builtins.oxfmt) {
+  glob = List("frontend/**/*.{ts,tsx,js,jsx,mjs,cjs}", "infra/**/*.ts")
+  exclude = List("**/node_modules/**", "**/dist/**", "backend/**")
+}
+
+// --- Typecheck (project-scoped, reuse each workspace's npm script) ---
+
+// NOTE: when `dir` is set, hk matches `glob` RELATIVE to that dir -- so these
+// globs are workspace-relative (not repo-relative like the no-dir steps above).
+// check runs the workspace's own project-scoped typecheck (no {{ files }}).
+local tscFrontend = new Step {
+  glob = List("**/*.{ts,tsx}")
+  dir = "frontend"
+  check = "npm run typecheck"
+}
+local tscInfra = new Step {
+  glob = List("**/*.ts")
+  dir = "infra"
+  check = "npm run typecheck"
+}
+
+hooks {
+  // Fast, auto-fixing pass on staged files. stash="git" so unstaged changes
+  // don't pollute fixer runs.
+  ["pre-commit"] {
+    fix = true
+    stash = "git"
+    steps {
+      ["ruff"] = ruffLint
+      ["ruff-format"] = ruffFormat
+      ["oxlint"] = oxlint
+      ["oxfmt"] = oxfmt
+    }
+  }
+  // Slower, read-only project checks before push. No tests here (CI owns those).
+  ["pre-push"] {
+    steps {
+      ["ruff"] = ruffLint
+      ["ruff-format"] = ruffFormat
+      ["oxlint"] = oxlint
+      ["oxfmt"] = oxfmt
+      ["tsc-frontend"] = tscFrontend
+      ["tsc-infra"] = tscInfra
+    }
+  }
+  // `hk check` / `hk fix` for ad-hoc local runs.
+  ["check"] {
+    steps {
+      ["ruff"] = ruffLint
+      ["ruff-format"] = ruffFormat
+      ["oxlint"] = oxlint
+      ["oxfmt"] = oxfmt
+      ["tsc-frontend"] = tscFrontend
+      ["tsc-infra"] = tscInfra
+    }
+  }
+  ["fix"] {
+    fix = true
+    steps {
+      ["ruff"] = ruffLint
+      ["ruff-format"] = ruffFormat
+      ["oxlint"] = oxlint
+      ["oxfmt"] = oxfmt
+    }
+  }
+}

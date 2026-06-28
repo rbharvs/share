@@ -12,7 +12,8 @@ Pulumi TS for Cloudflare, plus the manual deploy runbook — the chokepoint that
 - **DNS** — private host records proxied to API Gateway; public host DNS-only to CloudFront.
 - **Access** — two separate applications/policies (dashboard audience + private-content audience), 7-day session, allowed owner email configured plainly (not a secret).
 - **AccessConfig mirroring** — the production issuer/audiences are mirrored into the backend `AccessConfig` (slice 02) so the verifier accepts real Cloudflare tokens per host. The per-host AUD is the cross-host replay defense; it originates in Cloudflare/Pulumi and must be mirrored out-of-band — drift breaks auth (verifier fails closed). Pin down the single source of truth and how the app reads per-host audiences.
-- **Manual deploy** — document/wire the runbook: run tests + build, then the single gated manual `pulumi up`. No automated CI deploy.
+- **Manual deploy** — document/wire the runbook: `mise run deploy` runs tests + build, then the single gated manual `pulumi up`. No automated CI deploy. The Pulumi CLI is mise-managed (`aqua:pulumi/pulumi`) pinned to the version that created the current state.
+- **One-time `@pulumi/aws` v7 migration** — the first deploy after the AWS provider v6→v7 bump must be run as `pulumi up --refresh --run-program` (v7 adds a `region` field to most resources; this is a one-time, non-destructive state reconciliation, no replacements expected). Run an operator-only `pulumi preview --refresh --run-program` first to confirm zero replacements before the real apply.
 
 This is where the **deployed-boundary checks** (grafted from the deploy-first plan) are actually exercised post-apply.
 

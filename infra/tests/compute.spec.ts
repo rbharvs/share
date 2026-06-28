@@ -90,8 +90,7 @@ describe("compute layer", () => {
       distributionArn: `arn:aws:cloudfront::111122223333:distribution/${DISTRIBUTION_ID}`,
       // AccessConfig mirroring (slice 14): production issuer + per-host AUDs.
       accessIssuer: "https://myteam.cloudflareaccess.com",
-      accessJwksUrl:
-        "https://myteam.cloudflareaccess.com/cdn-cgi/access/certs",
+      accessJwksUrl: "https://myteam.cloudflareaccess.com/cdn-cgi/access/certs",
       dashboardAudience: "dashboard-aud-tag",
       privateAudience: "private-aud-tag",
       ownerEmail: "owner@example.com",
@@ -107,18 +106,14 @@ describe("compute layer", () => {
     it("uses the PRD runtime contract (py3.12 / arm64 / 512 MB / 30 s)", async () => {
       expect(await promiseOf(compute.lambda.runtime)).to.equal(LAMBDA_RUNTIME);
       expect(LAMBDA_RUNTIME).to.equal("python3.12");
-      expect(await promiseOf(compute.lambda.architectures)).to.deep.equal([
-        LAMBDA_ARCHITECTURE,
-      ]);
+      expect(await promiseOf(compute.lambda.architectures)).to.deep.equal([LAMBDA_ARCHITECTURE]);
       expect(LAMBDA_ARCHITECTURE).to.equal("arm64");
       expect(await promiseOf(compute.lambda.memorySize)).to.equal(512);
       expect(await promiseOf(compute.lambda.timeout)).to.equal(30);
     });
 
     it("invokes the Mangum handler entrypoint", async () => {
-      expect(await promiseOf(compute.lambda.handler)).to.equal(
-        "share.handler.handler",
-      );
+      expect(await promiseOf(compute.lambda.handler)).to.equal("share.handler.handler");
     });
 
     it("passes the distribution id + resource names through the environment", async () => {
@@ -139,26 +134,18 @@ describe("compute layer", () => {
       // which access_configs() reads per host. The two AUDs stay DISTINCT (the
       // cross-host replay defense) and the issuer is the real cloudflareaccess
       // domain — never the localhost dev issuer.
-      expect(vars.SHARE_ACCESS_ISSUER).to.equal(
-        "https://myteam.cloudflareaccess.com",
-      );
+      expect(vars.SHARE_ACCESS_ISSUER).to.equal("https://myteam.cloudflareaccess.com");
       expect(vars.SHARE_JWKS_URL).to.equal(
         "https://myteam.cloudflareaccess.com/cdn-cgi/access/certs",
       );
       expect(vars.SHARE_DASHBOARD_AUDIENCE).to.equal("dashboard-aud-tag");
       expect(vars.SHARE_PRIVATE_AUDIENCE).to.equal("private-aud-tag");
-      expect(vars.SHARE_DASHBOARD_AUDIENCE).to.not.equal(
-        vars.SHARE_PRIVATE_AUDIENCE,
-      );
+      expect(vars.SHARE_DASHBOARD_AUDIENCE).to.not.equal(vars.SHARE_PRIVATE_AUDIENCE);
     });
 
     it("retains the Lambda log group for 30 days", async () => {
-      expect(await promiseOf(compute.lambdaLogGroup.retentionInDays)).to.equal(
-        30,
-      );
-      expect(await promiseOf(compute.lambdaLogGroup.name)).to.match(
-        /^\/aws\/lambda\//,
-      );
+      expect(await promiseOf(compute.lambdaLogGroup.retentionInDays)).to.equal(30);
+      expect(await promiseOf(compute.lambdaLogGroup.name)).to.match(/^\/aws\/lambda\//);
     });
   });
 
@@ -167,10 +154,10 @@ describe("compute layer", () => {
     // so every IAM role's physical name MUST start with "share-" or the deploy
     // fails with AccessDenied. Pulumi auto-naming would NOT add that prefix.
     it("gives the Lambda execution role a share- name prefix", async () => {
-      const prefix = await promiseOf(
-        compute.role.namePrefix as pulumi.Output<string>,
-      );
-      expect(prefix).to.be.a("string").and.match(/^share-/);
+      const prefix = await promiseOf(compute.role.namePrefix as pulumi.Output<string>);
+      expect(prefix)
+        .to.be.a("string")
+        .and.match(/^share-/);
     });
   });
 
@@ -183,9 +170,7 @@ describe("compute layer", () => {
     it("restricts invoke to the checked-in Cloudflare IP ranges", async () => {
       const raw = await promiseOf(compute.restApi.policy);
       const policy = JSON.parse(raw as string);
-      const deny = policy.Statement.find(
-        (s: { Effect: string }) => s.Effect === "Deny",
-      );
+      const deny = policy.Statement.find((s: { Effect: string }) => s.Effect === "Deny");
       expect(deny, "a Deny statement must exist").to.exist;
       const allowed = deny.Condition.NotIpAddress["aws:SourceIp"];
       expect(allowed).to.deep.equal([...CLOUDFLARE_IP_RANGES]);
@@ -196,24 +181,19 @@ describe("compute layer", () => {
       const settings = await promiseOf(compute.stage.accessLogSettings);
       expect(settings?.destinationArn).to.be.a("string").and.not.empty;
       expect(settings?.format).to.equal(ACCESS_LOG_FORMAT);
-      expect(await promiseOf(compute.accessLogGroup.retentionInDays)).to.equal(
-        30,
-      );
+      expect(await promiseOf(compute.accessLogGroup.retentionInDays)).to.equal(30);
     });
 
     it("provisions a CloudWatch role at the account level for logging", async () => {
-      expect(
-        await promiseOf(compute.apiGatewayAccount.cloudwatchRoleArn),
-      ).to.be.a("string").and.not.empty;
+      expect(await promiseOf(compute.apiGatewayAccount.cloudwatchRoleArn)).to.be.a("string").and.not
+        .empty;
     });
   });
 
   describe("custom domains", () => {
     it("creates a regional domain for each private host", async () => {
       expect(compute.customDomains).to.have.length(2);
-      const names = await Promise.all(
-        compute.customDomains.map((d) => promiseOf(d.domainName)),
-      );
+      const names = await Promise.all(compute.customDomains.map((d) => promiseOf(d.domainName)));
       expect(new Set(names)).to.deep.equal(
         new Set(["share.example.com", "private.usercontent.example"]),
       );
@@ -228,9 +208,7 @@ describe("compute layer", () => {
       for (const cert of compute.certificates) {
         expect(await promiseOf(cert.validationMethod)).to.equal("DNS");
       }
-      const certHosts = await Promise.all(
-        compute.certificates.map((c) => promiseOf(c.domainName)),
-      );
+      const certHosts = await Promise.all(compute.certificates.map((c) => promiseOf(c.domainName)));
       expect(new Set(certHosts)).to.deep.equal(
         new Set(["share.example.com", "private.usercontent.example"]),
       );
@@ -246,9 +224,7 @@ describe("compute layer", () => {
         }>;
       };
       const deny = policy.Statement.find((s) => s.Effect === "Deny");
-      expect(deny?.Condition?.NotIpAddress?.["aws:SourceIp"]).to.deep.equal([
-        "203.0.113.0/24",
-      ]);
+      expect(deny?.Condition?.NotIpAddress?.["aws:SourceIp"]).to.deep.equal(["203.0.113.0/24"]);
     });
 
     it("defaults to every checked-in Cloudflare range", () => {

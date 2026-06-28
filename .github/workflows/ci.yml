@@ -1,7 +1,9 @@
 name: CI
 
-# Validation only — deploy stays manual (Pulumi run by the owner). Mirrors the
-# root Makefile so local `make check` / `make test` match CI exactly.
+# Validation only -- deploy stays manual (Pulumi run by the owner; no deploy job
+# exists here by design). Tools come from mise (mise.toml + mise.lock) so local
+# `mise run check` / `mise run test` match CI exactly. Each job installs only the
+# mise tools it needs (pulumi/hk are never installed in CI).
 on:
   push:
   pull_request:
@@ -15,51 +17,84 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: jdx/mise-action@v4
         with:
-          enable-cache: true
-          cache-dependency-glob: backend/uv.lock
-      # `make backend-check` = ruff lint + ruff format --check (read-only).
+          install: false
+          cache: true
+          # Avoids the 60 req/hr anonymous GitHub API limit when mise resolves
+          # tool releases.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install backend toolchain (python + uv)
+        run: mise install python uv
+      # Fails if backend/uv.lock has drifted from pyproject.toml (UV_FROZEN
+      # would otherwise hide this; the task overrides it).
+      - name: Lockfile in sync
+        run: mise run lock-check
+      # `mise run backend:check` = ruff lint + ruff format --check (read-only).
       - name: Lint + format check
-        run: make backend-check
-      # `make backend-test` also builds a real Lambda zip and asserts the
-      # vendored arm64 `cryptography` wheel (needs uv on PATH + network).
+        run: mise run backend:check
+      # `mise run backend:test` also builds a real Lambda zip and asserts the
+      # vendored arm64 `cryptography` wheel (needs uv on PATH + network). Builds
+      # for python3.12 even though the host runs python3.13 (build_lambda.py
+      # cross-targets via --python-version 3.12).
       - name: Tests
-        run: make backend-test
+        run: mise run backend:test
 
   frontend:
     name: frontend (typecheck / build)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: jdx/mise-action@v4
         with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - name: Install
+          install: false
+          cache: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install node (24)
+        run: mise install node
+      - name: Install deps
         working-directory: frontend
-        run: npm ci
+        run: mise exec -- npm ci
       - name: Typecheck
-        run: make frontend-check
+        run: mise run frontend:check
       - name: Build
-        run: make frontend-build
+        run: mise run frontend:build
 
   infra:
     name: infra (TS typecheck)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: jdx/mise-action@v4
         with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: infra/package-lock.json
-      - name: Install
+          install: false
+          cache: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install node (24)
+        run: mise install node
+      - name: Install deps
         working-directory: infra
-        run: npm ci
+        run: mise exec -- npm ci
       - name: Typecheck
-        run: make infra-check
+        run: mise run infra:check
       # Focused config checks: Pulumi program under unit-test mocks (no AWS).
       - name: Config checks
-        run: make infra-test
+        run: mise run infra:test
+
+  lint:
+    name: lint + format (oxc, TS/JS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v4
+        with:
+          install: false
+          cache: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      # oxlint/oxfmt install through mise's npm backend, which needs node.
+      - name: Install lint toolchain (node + oxlint + oxfmt)
+        run: mise install node oxlint oxfmt
+      - name: oxlint
+        run: mise run lint
+      - name: oxfmt --check
+        run: mise run fmt-check

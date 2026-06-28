@@ -76,11 +76,7 @@ describe("public CDN layer", () => {
     const cloudflareProvider = new cloudflare.Provider("cf", {
       apiToken: "test-token",
     });
-    const publicBucket = new aws.s3.BucketV2(
-      "public",
-      { bucket: "share-public" },
-      { provider },
-    );
+    const publicBucket = new aws.s3.BucketV2("public", { bucket: "share-public" }, { provider });
     cdn = createCdnResources({
       cfg: CFG,
       provider,
@@ -92,9 +88,7 @@ describe("public CDN layer", () => {
 
   describe("origin access control", () => {
     it("signs every origin request with SigV4 against S3", async () => {
-      expect(await promiseOf(cdn.oac.originAccessControlOriginType)).to.equal(
-        "s3",
-      );
+      expect(await promiseOf(cdn.oac.originAccessControlOriginType)).to.equal("s3");
       expect(await promiseOf(cdn.oac.signingBehavior)).to.equal("always");
       expect(await promiseOf(cdn.oac.signingProtocol)).to.equal("sigv4");
     });
@@ -127,9 +121,7 @@ describe("public CDN layer", () => {
     });
 
     it("terminates TLS with a DNS-validated ACM cert for the public host", async () => {
-      expect(await promiseOf(cdn.certificate.domainName)).to.equal(
-        "public.usercontent.example",
-      );
+      expect(await promiseOf(cdn.certificate.domainName)).to.equal("public.usercontent.example");
       expect(await promiseOf(cdn.certificate.validationMethod)).to.equal("DNS");
       const viewer = await promiseOf(cdn.distribution.viewerCertificate);
       expect(viewer.sslSupportMethod).to.equal("sni-only");
@@ -140,17 +132,12 @@ describe("public CDN layer", () => {
     it("emits the shared security headers + public cache, byte-for-byte", async () => {
       // Recognized security headers live in the typed securityHeadersConfig
       // (CloudFront rejects them as custom headers); the rest are custom.
-      const sec = await promiseOf(
-        cdn.responseHeadersPolicy.securityHeadersConfig,
-      );
-      const customCfg = await promiseOf(
-        cdn.responseHeadersPolicy.customHeadersConfig,
-      );
+      const sec = await promiseOf(cdn.responseHeadersPolicy.securityHeadersConfig);
+      const customCfg = await promiseOf(cdn.responseHeadersPolicy.customHeadersConfig);
       const customItems = customCfg?.items ?? [];
 
       const emitted: Record<string, string | undefined> = {
-        "Content-Security-Policy": sec?.contentSecurityPolicy
-          ?.contentSecurityPolicy,
+        "Content-Security-Policy": sec?.contentSecurityPolicy?.contentSecurityPolicy,
         "X-Content-Type-Options": sec?.contentTypeOptions ? "nosniff" : undefined,
         "Referrer-Policy": sec?.referrerPolicy?.referrerPolicy,
         ...Object.fromEntries(customItems.map((i) => [i.header, i.value])),
@@ -166,27 +153,19 @@ describe("public CDN layer", () => {
         expect(item.override).to.equal(true);
       }
       // The load-bearing isolation directive must never gain same-origin.
-      expect(emitted["Content-Security-Policy"]).to.not.contain(
-        "allow-same-origin",
-      );
+      expect(emitted["Content-Security-Policy"]).to.not.contain("allow-same-origin");
     });
   });
 
   describe("rewrite function", () => {
     it("uses the cloudfront-js-2.0 runtime", async () => {
-      expect(await promiseOf(cdn.rewriteFunction.runtime)).to.equal(
-        "cloudfront-js-2.0",
-      );
+      expect(await promiseOf(cdn.rewriteFunction.runtime)).to.equal("cloudfront-js-2.0");
     });
 
     it("maps /u/{sha} and /u/{sha}/ to index.html (rewrite, not redirect)", () => {
       const handler = loadRewriteHandler();
-      expect(handler({ request: { uri: "/u/abc123" } }).uri).to.equal(
-        "/u/abc123/index.html",
-      );
-      expect(handler({ request: { uri: "/u/abc123/" } }).uri).to.equal(
-        "/u/abc123/index.html",
-      );
+      expect(handler({ request: { uri: "/u/abc123" } }).uri).to.equal("/u/abc123/index.html");
+      expect(handler({ request: { uri: "/u/abc123/" } }).uri).to.equal("/u/abc123/index.html");
     });
 
     it("leaves already-resolved and unrelated paths untouched", () => {
@@ -194,9 +173,7 @@ describe("public CDN layer", () => {
       expect(handler({ request: { uri: "/u/abc123/index.html" } }).uri).to.equal(
         "/u/abc123/index.html",
       );
-      expect(handler({ request: { uri: "/style.css" } }).uri).to.equal(
-        "/style.css",
-      );
+      expect(handler({ request: { uri: "/style.css" } }).uri).to.equal("/style.css");
     });
   });
 

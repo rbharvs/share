@@ -4,6 +4,12 @@
     "target": "es2020",
     "module": "commonjs",
     "moduleResolution": "node",
+    // TS 6.0 deprecates legacy "node" (node10) resolution; it still works in 6.x
+    // and is removed in 7.0. Pulumi runs this program through ts-node as
+    // CommonJS, for which node10 resolution is the correct mode, so we silence
+    // the deprecation rather than switch to node16/nodenext (which would force
+    // ESM-style module emit Pulumi's loader does not expect).
+    "ignoreDeprecations": "6.0",
     "lib": ["es2020"],
     "outDir": "bin",
     "sourceMap": true,

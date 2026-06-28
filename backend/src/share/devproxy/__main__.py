@@ -4,10 +4,10 @@ Starts two listeners on the browser-facing local origins, sharing one signing
 key (one JWKS verifies both audiences):
 
 * ``share.localhost:5174`` -> dashboard upstream (Vite by default; FastAPI under
-  ``make preview``), minting dashboard-audience tokens.
+  ``mise run preview``), minting dashboard-audience tokens.
 * ``private.localhost:5175`` -> FastAPI, minting private-audience tokens.
 
-``make dev`` runs this alongside Vite and FastAPI; ``make preview`` points the
+``mise run dev`` runs this alongside Vite and FastAPI; ``mise run preview`` points the
 dashboard upstream at FastAPI so the built SPA is served production-shape. The
 dashboard upstream is overridable via ``SHARE_DASHBOARD_UPSTREAM``.
 """
