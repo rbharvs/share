@@ -30,11 +30,16 @@ idiomatic_version_file_enable_tools = []
 
 [env]
 # uv does NOT auto-adopt mise's managed Python; without this it may fall back to
-# a system interpreter of a different 3.x. Pin uv to the mise Python path so
-# `uv run`/`uv sync` build the backend venv on 3.13. The Lambda vendor step in
-# scripts/build_lambda.py passes explicit --python-version 3.12, so it still
-# cross-targets the 3.12 runtime regardless of this.
-UV_PYTHON = { value = "{{tools.python.path}}", tools = true }
+# a self-managed interpreter of a different 3.x. Pin uv to python 3.13 and prefer
+# the interpreter on PATH (the mise-provided one) over a uv-downloaded one, so
+# `uv run`/`uv sync` build the backend venv on the mise python. These are STATIC
+# values (no `{{tools.*}}` template) so mise can evaluate them before the tools
+# are installed -- the templated path form breaks `mise env` in CI when the
+# action runs with install:false (python not yet present). The Lambda vendor
+# step in scripts/build_lambda.py passes explicit --python-version 3.12, so it
+# still cross-targets the 3.12 runtime regardless of this.
+UV_PYTHON = "3.13"
+UV_PYTHON_PREFERENCE = "system"
 # Belt-and-suspenders so hk resolves mise-managed tools even in an unactivated
 # shell; the primary mechanism is `hk install --mise`.
 HK_MISE = "1"
