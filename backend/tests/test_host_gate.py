@@ -103,9 +103,8 @@ def test_dashboard_rejects_content_path(path, method):
     ],
 )
 def test_private_allows_root_robots_content_reads(path, method):
-    assert (
-        evaluate("private.usercontent.example", path, method) is HostKind.PRIVATE_CONTENT
-    )
+    kind = evaluate("private.usercontent.example", path, method)
+    assert kind is HostKind.PRIVATE_CONTENT
 
 
 @pytest.mark.parametrize(
