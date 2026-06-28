@@ -1,5 +1,67 @@
 @import "tailwindcss";
 
+/*
+ * Squared / slightly-retro design tokens.
+ *
+ * Corners are true 0; the retro signal is the hard, zero-blur offset shadow
+ * (`shadow-hard`) plus near-black hairline borders on a warm "bone" canvas.
+ * Colors are semantic (retro-bg / retro-line / retro-accent / …) so the same
+ * utility adapts to light/dark by re-binding the variable below — components
+ * never hardcode slate/blue. Fonts are system stacks only (no network fonts).
+ */
+@theme {
+  /* Radius: square everything. Re-points every rounded-* literal to 0. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+
+  /* Type: grotesque-leaning system sans for UI, system mono for data/IDs. */
+  --font-sans:
+    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", "IBM Plex Mono", Menlo, Consolas,
+    monospace;
+
+  /* Hard, zero-blur offset shadows — the main retro cue. Shadow color tracks
+     the hairline token, so dark mode needs no shadow override. */
+  --shadow-hard: 2px 2px 0 0 var(--color-retro-line);
+  --shadow-hard-lg: 4px 4px 0 0 var(--color-retro-line);
+
+  /* Light scheme: warm bone paper, near-black hairline, muted teal-green. */
+  --color-retro-bg: oklch(0.972 0.008 95);
+  --color-retro-surface: oklch(0.992 0.006 95);
+  --color-retro-line: oklch(0.27 0.005 250);
+  --color-retro-ink: oklch(0.2 0.005 250);
+  --color-retro-muted: oklch(0.46 0.006 250);
+  --color-retro-faint: oklch(0.62 0.006 250);
+  --color-retro-accent: oklch(0.46 0.09 175);
+  --color-retro-accent-fg: oklch(0.99 0.006 95);
+  --color-retro-accent-weak: oklch(0.93 0.035 175);
+  --color-retro-danger: oklch(0.52 0.18 25);
+  --color-retro-danger-weak: oklch(0.94 0.04 25);
+}
+
+/* Dark scheme: muted phosphor on near-black blue, not pure black. Re-binds the
+   same semantic tokens; utilities and shadows follow automatically. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-retro-bg: oklch(0.205 0.012 250);
+    --color-retro-surface: oklch(0.25 0.012 250);
+    --color-retro-line: oklch(0.64 0.02 250);
+    --color-retro-ink: oklch(0.93 0.01 250);
+    --color-retro-muted: oklch(0.7 0.02 250);
+    --color-retro-faint: oklch(0.56 0.02 250);
+    --color-retro-accent: oklch(0.74 0.12 175);
+    --color-retro-accent-fg: oklch(0.18 0.012 250);
+    --color-retro-accent-weak: oklch(0.32 0.05 175);
+    --color-retro-danger: oklch(0.7 0.16 25);
+    --color-retro-danger-weak: oklch(0.3 0.06 25);
+  }
+}
+
 :root {
   color-scheme: light dark;
 }
@@ -12,4 +74,8 @@ body,
 
 body {
   margin: 0;
+  background-color: var(--color-retro-bg);
+  color: var(--color-retro-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }

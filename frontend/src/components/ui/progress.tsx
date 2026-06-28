@@ -15,7 +15,7 @@ export function Progress({
   return (
     <div
       className={cn(
-        "h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800",
+        "h-2 w-full overflow-hidden rounded-none border border-retro-line bg-retro-bg",
         className,
       )}
       role="progressbar"
@@ -24,7 +24,7 @@ export function Progress({
       aria-valuemax={100}
     >
       <div
-        className="h-full rounded-full bg-blue-600 transition-all duration-150 dark:bg-blue-500"
+        className="h-full rounded-none bg-retro-accent transition-all duration-150"
         style={{ width: `${clamped}%` }}
       />
     </div>

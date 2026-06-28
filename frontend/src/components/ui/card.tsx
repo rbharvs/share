@@ -6,7 +6,7 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-slate-200 bg-white text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50",
+        "rounded-none border border-retro-line bg-retro-surface text-retro-ink shadow-hard",
         className,
       )}
       {...props}
@@ -20,7 +20,10 @@ export function CardHeader({
 }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("flex flex-col gap-1 p-6 pb-2", className)}
+      className={cn(
+        "flex flex-col gap-1 border-b border-retro-line/60 p-5 pb-3",
+        className,
+      )}
       {...props}
     />
   );
@@ -32,7 +35,10 @@ export function CardTitle({
 }: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h2
-      className={cn("text-lg font-semibold tracking-tight", className)}
+      className={cn(
+        "font-mono text-sm font-semibold uppercase tracking-widest text-retro-ink",
+        className,
+      )}
       {...props}
     />
   );
@@ -44,7 +50,7 @@ export function CardDescription({
 }: HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={cn("text-sm text-slate-500 dark:text-slate-400", className)}
+      className={cn("text-sm text-retro-muted", className)}
       {...props}
     />
   );
@@ -54,5 +60,5 @@ export function CardContent({
   className,
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-6 pt-2", className)} {...props} />;
+  return <div className={cn("p-5 pt-4", className)} {...props} />;
 }

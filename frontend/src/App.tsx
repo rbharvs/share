@@ -16,12 +16,14 @@ function Dashboard() {
 export default function App() {
   return (
     <ToastProvider>
-      <div className="min-h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-        <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+      <div className="min-h-full bg-retro-bg text-retro-ink">
+        <header className="border-b border-retro-line bg-retro-surface">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight">share</h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+            <div className="flex items-baseline gap-3">
+              <h1 className="font-mono text-xl font-bold uppercase tracking-[0.3em] text-retro-ink">
+                share
+              </h1>
+              <p className="text-sm text-retro-muted">
                 Personal sharing dashboard
               </p>
             </div>
