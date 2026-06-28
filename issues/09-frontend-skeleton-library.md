@@ -15,7 +15,7 @@ This slice also lands the **local Access reverse-proxy forwarding** that slice 0
 
 Notes:
 
-- Host reads stay routed through `classify_host` (custom-domain `Host` vs `X-Forwarded-Host`). Confirm whether the SPA at `/` needs habit-tracker's trailing-slash `307` shim for relative asset URLs, and add it to the Mangum handler wrapper if so.
+- Host reads stay routed through `classify_host` (custom-domain `Host` vs `X-Forwarded-Host`). Confirm whether the SPA at `/` needs a [sibling project](https://github.com/rbharvs/habit-tracker)'s trailing-slash `307` shim for relative asset URLs, and add it to the Mangum handler wrapper if so.
 - Frontend stores no credentials/tokens in local/sessionStorage. Built assets are copied into backend package resources at build; generated assets are gitignored.
 
 ## Acceptance criteria

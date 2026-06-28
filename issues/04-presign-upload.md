@@ -13,7 +13,7 @@ This is the first product vertical, so it brings up the shared lower layers that
 
 - **ObjectStorage adapter** — bucket config, `tmp/` key helper, `presign_post`, centralized `NoSuchKey`/404 → `None`.
 - **MetadataRepository** — upload-session create/get (the two-item content write helper arrives in slice 05).
-- **DI chain** mirroring habit-tracker: env-config → `get_*` provider → `Annotated` alias; routes depend on a `UploadService` alias, never on storage directly. Tests override the leaf provider (`get_storage`/`get_repo`) and clear afterward; `@lru_cache` real providers are overridden, not invoked, under moto.
+- **DI chain** mirroring a [sibling project](https://github.com/rbharvs/habit-tracker): env-config → `get_*` provider → `Annotated` alias; routes depend on a `UploadService` alias, never on storage directly. Tests override the leaf provider (`get_storage`/`get_repo`) and clear afterward; `@lru_cache` real providers are overridden, not invoked, under moto.
 - **CSRF/Origin guard** for all unsafe dashboard methods: require `X-Share-CSRF: 1` AND `Origin: https://share.example.com` (the local dashboard origin in dev). No FastAPI CORS middleware in v1.
 
 Key decisions:

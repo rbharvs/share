@@ -19,7 +19,7 @@ exercised without a frontend build.
 
 Asset URLs emitted by Vite are root-absolute (``/assets/...``), not relative to
 the document, so the SPA served at ``/`` resolves its assets correctly without
-any trailing-slash ``307`` shim — the habit-tracker shim the issue asks about is
+any trailing-slash ``307`` shim — the shim the issue asks about is
 deliberately NOT needed here, and none is added to the Mangum wrapper.
 """
 

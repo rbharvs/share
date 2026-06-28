@@ -9,7 +9,7 @@
 
 The reproducible build that turns the working app into one deployable Lambda artifact, plus monorepo CI.
 
-Root task runner / Makefile mirroring habit-tracker's `fix`/`check`/`format`/`test`/`dev`, but swapping SAM for:
+Root task runner / Makefile mirroring a [sibling project](https://github.com/rbharvs/habit-tracker)'s `fix`/`check`/`format`/`test`/`dev`, but swapping SAM for:
 
 1. Build the frontend first.
 2. Copy built assets into backend package resources.

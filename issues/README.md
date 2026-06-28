@@ -71,7 +71,7 @@ These implementation-detail forks were settled with sensible defaults rather tha
 - `sanitize_attrs=False` (keeps `onclick=` etc.) — faithful to the PRD's "preserve unsafe/raw behaviors".
 - Presigned-POST policy enforcement can't be exercised by in-process moto; tests simulate with `put_object`. An optional gated real-S3 / `moto_server` integration check could be added if desired.
 - Per-host Access AUD originates in Cloudflare/Pulumi and is mirrored into backend `AccessConfig` via config (slice 14).
-- SPA-at-`/` may need habit-tracker's trailing-slash `307` shim (decided in slice 09).
+- SPA-at-`/` may need a [sibling project](https://github.com/rbharvs/habit-tracker)'s trailing-slash `307` shim (decided in slice 09).
 
 ## Deploy
 

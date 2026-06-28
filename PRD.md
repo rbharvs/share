@@ -28,7 +28,7 @@ https://private.usercontent.example/u/{sha256}
 
 Arbitrary HTML and JavaScript are intentionally allowed. Because of that, rendered content must never share an origin with the private dashboard. The separate `usercontent.example` domain and CSP sandbox headers are core security requirements, not optional polish.
 
-The backend follows the same broad architecture as the existing habit-tracker project: FastAPI on AWS Lambda through Mangum, API Gateway REST API, DynamoDB, S3, and Cloudflare Access at ingress. Infrastructure is managed with Pulumi TypeScript instead of SAM.
+The backend follows the same broad architecture as a [sibling FastAPI-on-Lambda project](https://github.com/rbharvs/habit-tracker): FastAPI on AWS Lambda through Mangum, API Gateway REST API, DynamoDB, S3, and Cloudflare Access at ingress. Infrastructure is managed with Pulumi TypeScript instead of SAM.
 
 ## Goals
 

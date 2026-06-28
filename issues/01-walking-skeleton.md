@@ -9,7 +9,7 @@
 
 The end-to-end request spine that every later slice plugs into, with no content or auth yet. A FastAPI app takes any request, assigns a `request_id` and emits one structured JSON log line, classifies the raw `Host` header to a host-kind via a shared registry, runs a pure host/path/method gate, and either dispatches to a trivial placeholder route or returns the structured error envelope. The same ASGI app is wrapped by a thin Mangum handler so `TestClient`, `uvicorn`, and a raw API Gateway REST v1 event dict all exercise identical code.
 
-This slice also lands the cross-cutting **prefactoring** the rest of the project depends on: the monorepo scaffold (backend `uv` project `src/share/` with deep modules per subpackage mirroring habit-tracker's Protocol + impl + re-exporting `__init__.py` convention; Vite frontend workspace; Pulumi-TS infra workspace; root Makefile with `fix`/`check`/`format`/`test`/`dev` targets), the shared host registry, the error envelope + all error codes, and the settings/config DI provider.
+This slice also lands the cross-cutting **prefactoring** the rest of the project depends on: the monorepo scaffold (backend `uv` project `src/share/` with deep modules per subpackage mirroring a [sibling project](https://github.com/rbharvs/habit-tracker)'s Protocol + impl + re-exporting `__init__.py` convention; Vite frontend workspace; Pulumi-TS infra workspace; root Makefile with `fix`/`check`/`format`/`test`/`dev` targets), the shared host registry, the error envelope + all error codes, and the settings/config DI provider.
 
 Key decisions (encode now):
 
