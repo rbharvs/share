@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise", "react"],
+  "categories": { "correctness": "error" },
+  "env": { "es2024": true },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "backend/src/share/static/**"
+  ],
+  "overrides": [
+    {
+      "files": ["frontend/**/*.{ts,tsx,jsx}"],
+      "env": { "browser": true }
+    },
+    {
+      "files": ["infra/**/*.ts"],
+      "env": { "node": true }
+    },
+    {
+      "files": ["**/*.spec.ts", "**/*.spec.tsx", "**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "no-unused-expressions": "off"
+      }
+    }
+  ]
+}

@@ -38,5 +38,11 @@ Pulumi.*.yaml
 .env.*
 !.env.example
 
+# mise local overrides (mise.toml + mise.lock ARE tracked)
+mise.local.toml
+.mise.local.toml
+mise.local.lock
+mise.*.local.lock
+
 # OS
 .DS_Store

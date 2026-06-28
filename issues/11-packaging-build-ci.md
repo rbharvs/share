@@ -28,7 +28,7 @@ CI runs the same checks on push: backend test/lint/format, frontend typecheck/bu
 - [ ] `requirements.txt` regenerated via `uv export` and vendored into the zip (no layers, no Docker); `cryptography` arm64 wheel resolved for the Lambda platform.
 - [ ] CI validates backend (test/lint/format), frontend (typecheck/build), and infra (TS typecheck); deploy stays manual.
 - [ ] `tool.uv.dev-dependencies` migrated to `dependency-groups.dev`.
-- [ ] `make check` green across all three workspaces; `make build` emits a single Lambda zip containing backend, vendored arm64 deps (including `cryptography`), and built SPA assets.
+- [ ] `mise run check` green across all three workspaces; `mise run build` emits a single Lambda zip containing backend, vendored arm64 deps (including `cryptography`), and built SPA assets.
 
 ## Blocked by
 

@@ -44,11 +44,21 @@ Never serve arbitrary uploaded content from `share.example.com`. Never expose da
 - Frontend v1: typecheck and production build are sufficient.
 - Infra: TypeScript typecheck plus focused config/unit checks where practical.
 
+## Tooling
+
+- `mise` pins all dev tool versions (node 24, python 3.13, uv, Pulumi CLI, hk, oxlint, oxfmt) in `mise.toml` + `mise.lock`, and is the task runner. There is no Makefile. Run `mise tasks` to list tasks; common ones: `mise run dev | preview | check | test | fix | build | deploy | boundary-checks`.
+- First-time setup: `mise install`, `mise trust`, then `hk install --mise` for git hooks.
+- Lint/format: `ruff` for Python (in the backend `uv` dev group — do NOT add ruff to mise), `oxlint` + `oxfmt` for frontend + infra TS/JS only (configs `.oxlintrc.json` / `.oxfmtrc.json`). `oxfmt` is deliberately scoped to TS/JS so it never reformats Pulumi YAML / JSON / the example config.
+- hk runs pre-commit (fast fixers) and pre-push (read-only checks); full test suites stay in CI.
+- Dependency pin policy: newest release >= 72h old (`min-release-age=3` in each `.npmrc`; `mise run relock` with `--exclude-newer '3 days'` for Python; Renovate enforces going forward). `wenmode` and `syrupy` are documented exceptions — keep their exact pins; do not let `mise run relock` drop them.
+- `UV_FROZEN=1` (set in `mise.toml`) makes backend installs use `uv.lock` exactly; update the lock only via `mise run relock`.
+
 ## Build/Deploy Expectations
 
-- Use `uv` for backend Python dependencies.
-- Use npm for frontend and infra.
+- Use `uv` for backend Python dependencies; npm for frontend and infra.
 - Build frontend, copy generated assets into backend package resources, then build one Lambda zip.
 - Pulumi consumes the prebuilt artifact; avoid doing expensive build work inside Pulumi preview.
-- Deployment is manual and gated: `make deploy` runs tests + build, then an interactive `pulumi up`. Run `make boundary-checks` after an apply.
-- Stack config (`infra/Pulumi.prod.yaml`) is gitignored and holds account/zone ids + the KMS-encrypted Cloudflare token; copy `infra/Pulumi.prod.yaml.example` to start. Never commit real ids, tokens, or domains.
+- The dev/build host runs python 3.13, but the deployed Lambda runtime stays `python3.12` — `scripts/build_lambda.py` cross-targets 3.12/arm64 explicitly. Do not bump the Lambda runtime here; that is a separate deploy-gated change.
+- Deployment is manual and gated: `mise run deploy` runs tests + build, then an interactive `pulumi up`. Run `mise run boundary-checks` after an apply. Deploy is never referenced from CI.
+- The Pulumi CLI is mise-managed and pinned to the version that created the stack state. The first deploy after the `@pulumi/aws` v7 bump must be `pulumi up --refresh --run-program` (one-time, non-destructive `region`-field state migration).
+- Stack config (`infra/Pulumi.prod.yaml`) is gitignored and holds account/zone ids + the KMS-encrypted Cloudflare token; copy `infra/Pulumi.prod.yaml.example` to start. Never commit real ids, tokens, or domains — and keep `mise.toml` / `hk.pkl` free of secrets, ids, and real hostnames.

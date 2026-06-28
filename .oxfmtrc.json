@@ -1,0 +1,30 @@
+{
+  "printWidth": 100,
+  "singleQuote": false,
+  "semi": true,
+  "trailingComma": "all",
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "backend/src/share/static/**",
+    "**/*.json",
+    "**/*.jsonc",
+    "**/*.json5",
+    "**/*.yaml",
+    "**/*.yml",
+    "**/*.toml",
+    "**/*.md",
+    "**/*.markdown",
+    "**/*.mdx",
+    "**/*.html",
+    "**/*.htm",
+    "**/*.css",
+    "**/*.scss",
+    "**/*.less",
+    "**/*.graphql",
+    "**/*.gql",
+    "**/*.vue",
+    "**/*.handlebars",
+    "**/*.hbs"
+  ]
+}

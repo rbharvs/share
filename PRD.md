@@ -777,25 +777,41 @@ API Gateway resource policy uses checked-in Cloudflare IP ranges. Do not fetch r
 
 Repository organization is a small monorepo with separate backend, frontend, and infrastructure workspaces.
 
+Tooling (versions + tasks):
+
+- `mise` is the single source of truth for dev tool versions (node, python, uv, the Pulumi CLI, hk, oxlint, oxfmt), pinned in `mise.toml` and reproduced via the committed `mise.lock`. It is also the task runner; there is no Makefile.
+- The dev/build host runs node 24 and python 3.13. The deployed Lambda runtime stays `python3.12` (see "Runtime split" below).
+- Lint/format: `ruff` for Python (lives in the backend `uv` dev group); `oxlint` + `oxfmt` (oxc) for frontend + infra TS/JS only. Typechecking is each workspace's own `tsc`.
+- `hk` (configured in `hk.pkl`, installed with `hk install --mise`) runs git hooks: pre-commit = fast auto-fixers on staged files; pre-push = read-only project checks (lint, format-check, typecheck). Test suites are left to CI, not hooks.
+
 Backend:
 
 - Python dependency management with `uv`.
-- Broad/ranged dependencies in project metadata, exact reproducibility through lockfile.
+- Broad/ranged dependencies in project metadata, exact reproducibility through the committed lockfile. `UV_FROZEN=1` (set in `mise.toml`) makes installs use `uv.lock` exactly; the lock is updated deliberately via `mise run relock`.
 - `wenmode` should be pinned through the lockfile and tested with golden cases.
 
 Frontend:
 
 - npm with lockfile.
-- Vite + React + TypeScript + Tailwind + shadcn/ui.
+- Vite + React + TypeScript + Tailwind + shadcn/ui. oxlint + oxfmt for lint/format.
 
 Infrastructure:
 
 - npm with lockfile.
-- Pulumi TypeScript.
+- Pulumi TypeScript. oxlint + oxfmt for lint/format.
+
+Supply-chain pin policy:
+
+- Every dependency pins to the newest release at least 72h (3 days) old, to avoid pulling a freshly-compromised version before it is caught and yanked. Enforced on every install via `min-release-age=3` in each workspace `.npmrc` (npm's unit is days) and `UV_FROZEN`/the `relock` task's `--exclude-newer '3 days'` for Python. Renovate (`renovate.json`, `minimumReleaseAge: 3 days`) keeps deps current under the same floor.
+- Documented exceptions (carved out by exact pin + `--exclude-newer-package`): `wenmode` (owner-trusted Markdown renderer; 0.7.0 published <72h ago) and `syrupy` (dev-only snapshot tool whose only fixed release is <72h after an upstream version mishap). Both are dev/trusted and re-vetted on bump.
+
+Runtime split (python 3.13 host vs python3.12 Lambda):
+
+- The dev/build host uses python 3.13, but `scripts/build_lambda.py` vendors wheels for `python3.12`/arm64 explicitly (`--python-version 3.12 --python-platform aarch64-manylinux2014 --only-binary :all:`), and `infra` keeps `LAMBDA_RUNTIME = "python3.12"`. So a 3.13 host still produces a correct 3.12 artifact. Bumping the Lambda runtime to 3.13 is a separate, deploy-gated change.
 
 Build/deploy behavior:
 
-- A root task runner/Makefile orchestrates common tasks.
+- `mise` orchestrates common tasks (`mise run build`, `mise run deploy`, etc.); there is no Makefile.
 - Build frontend first.
 - Copy built frontend assets into backend package resources.
 - Build one Lambda zip containing backend code, vendored dependencies, and built frontend assets.
@@ -803,15 +819,17 @@ Build/deploy behavior:
 - Pulumi preview should not perform expensive build steps.
 - V1 uses vendored dependencies in the Lambda zip, not Lambda layers.
 - V1 uses local `uv`-based packaging, not Docker, because dependencies are expected to be pure Python. Switch to Docker later if native dependencies are added.
-- Deploy remains manual through Pulumi initially.
+- Deploy remains manual through Pulumi initially (`mise run deploy` = tests + build, then interactive `pulumi up`; never in CI).
 - Deploy should run tests and build before `pulumi up`.
+- The Pulumi CLI is mise-managed (`aqua:pulumi/pulumi`) pinned to the version that created the current stack state. NOTE: the first deploy after the `@pulumi/aws` v7 upgrade must be run as `pulumi up --refresh --run-program` (v7 adds a `region` field to most resources; this is a one-time, non-destructive state migration — no replacements expected).
 
-Initial CI validation:
+Initial CI validation (GitHub Actions; tools provided by `jdx/mise-action`, no setup-uv/setup-node):
 
 - Backend tests, lint, and format check.
 - Frontend typecheck and build.
 - Infrastructure TypeScript typecheck.
-- No required Pulumi preview in initial CI because stack secrets/config may not be available.
+- TS/JS lint (oxlint) + format check (oxfmt).
+- No required Pulumi preview in initial CI because stack secrets/config may not be available; no deploy job exists in CI.
 
 ## User Stories
 

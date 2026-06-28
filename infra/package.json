@@ -9,17 +9,17 @@
     "test": "TS_NODE_PROJECT=tsconfig.test.json mocha"
   },
   "dependencies": {
-    "@pulumi/aws": "^6.83.4",
+    "@pulumi/aws": "^7.34.0",
     "@pulumi/cloudflare": "^6.17.0",
-    "@pulumi/pulumi": "^3.130.0"
+    "@pulumi/pulumi": "^3.248.0"
   },
   "devDependencies": {
-    "@types/chai": "^4.3.20",
+    "@types/chai": "^5.2.3",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^20.14.0",
-    "chai": "^4.5.0",
-    "mocha": "^10.8.2",
+    "@types/node": "^24.0.0",
+    "chai": "^6.2.2",
+    "mocha": "^11.7.6",
     "ts-node": "^10.9.2",
-    "typescript": "^5.5.3"
+    "typescript": "^6.0.3"
   }
 }

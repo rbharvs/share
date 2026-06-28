@@ -21,7 +21,7 @@ The interactive dashboard flows on top of the slice-09 shell and the real upload
 - [ ] Publish/unpublish buttons mutate state in place and reflect new status + public link; double-clicks are safe (backend idempotent).
 - [ ] Invalid / unsupported / oversized uploads surface the structured error code + message; no polling.
 - [ ] Frontend typecheck and production build pass.
-- [ ] `make dev`: drag an HTML file → progress bar fills → item appears as `uploaded` with a private link; override a `.txt` to markdown and upload; Publish → public link appears; Unpublish → it disappears.
+- [ ] `mise run dev`: drag an HTML file → progress bar fills → item appears as `uploaded` with a private link; override a `.txt` to markdown and upload; Publish → public link appears; Unpublish → it disappears.
 
 ## Blocked by
 
