@@ -12,10 +12,8 @@ from __future__ import annotations
 import base64
 import json
 
-import boto3
 import pytest
 from fastapi.testclient import TestClient
-from moto import mock_aws
 
 from conftest import DASHBOARD_AUDIENCE
 from share.api import create_app
@@ -35,29 +33,14 @@ CONTENT_PUBLIC_HOST = "public.localhost:5176"
 
 
 @pytest.fixture
-def repo():
-    """A moto-backed DynamoDB table and the matching repository adapter."""
+def repo(_moto_aws):
+    """The repository adapter over the session-scoped moto DynamoDB table."""
 
-    with mock_aws():
-        ddb = boto3.resource("dynamodb", region_name="us-east-1")
-        ddb.create_table(
-            TableName=TABLE_NAME,
-            KeySchema=[
-                {"AttributeName": "pk", "KeyType": "HASH"},
-                {"AttributeName": "sk", "KeyType": "RANGE"},
-            ],
-            AttributeDefinitions=[
-                {"AttributeName": "pk", "AttributeType": "S"},
-                {"AttributeName": "sk", "AttributeType": "S"},
-            ],
-            BillingMode="PAY_PER_REQUEST",
-        )
-        ddb.Table(TABLE_NAME).wait_until_exists()
-        yield DynamoMetadataRepository(
-            table_name=TABLE_NAME,
-            resource=ddb,
-            client=boto3.client("dynamodb", region_name="us-east-1"),
-        )
+    return DynamoMetadataRepository(
+        table_name=_moto_aws.table_name,
+        resource=_moto_aws.ddb_resource,
+        client=_moto_aws.ddb_client,
+    )
 
 
 @pytest.fixture

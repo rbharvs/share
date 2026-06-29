@@ -12,10 +12,8 @@ from __future__ import annotations
 
 import hashlib
 
-import boto3
 import pytest
 from fastapi.testclient import TestClient
-from moto import mock_aws
 
 from conftest import DASHBOARD_AUDIENCE, PRIVATE_AUDIENCE
 from share.api import create_app
@@ -41,35 +39,21 @@ SHA = hashlib.sha256(b"some-canonical-raw-source").hexdigest()
 
 
 @pytest.fixture
-def aws_backends():
-    """A moto-backed S3 bucket + DynamoDB table and the matching adapters."""
+def aws_backends(_moto_aws):
+    """Adapters over the session-scoped moto S3 bucket + DynamoDB table."""
 
-    with mock_aws():
-        s3 = boto3.client("s3", region_name="us-east-1")
-        s3.create_bucket(Bucket=PRIVATE_BUCKET)
-
-        ddb = boto3.resource("dynamodb", region_name="us-east-1")
-        ddb.create_table(
-            TableName=TABLE_NAME,
-            KeySchema=[
-                {"AttributeName": "pk", "KeyType": "HASH"},
-                {"AttributeName": "sk", "KeyType": "RANGE"},
-            ],
-            AttributeDefinitions=[
-                {"AttributeName": "pk", "AttributeType": "S"},
-                {"AttributeName": "sk", "AttributeType": "S"},
-            ],
-            BillingMode="PAY_PER_REQUEST",
-        )
-        ddb.Table(TABLE_NAME).wait_until_exists()
-
-        storage = S3ObjectStorage(client=s3, private_bucket=PRIVATE_BUCKET)
-        repo = DynamoMetadataRepository(
-            table_name=TABLE_NAME,
-            resource=ddb,
-            client=boto3.client("dynamodb", region_name="us-east-1"),
-        )
-        yield {"s3": s3, "ddb": ddb, "storage": storage, "repo": repo}
+    storage = S3ObjectStorage(client=_moto_aws.s3_client, private_bucket=PRIVATE_BUCKET)
+    repo = DynamoMetadataRepository(
+        table_name=TABLE_NAME,
+        resource=_moto_aws.ddb_resource,
+        client=_moto_aws.ddb_client,
+    )
+    return {
+        "s3": _moto_aws.s3_client,
+        "ddb": _moto_aws.ddb_resource,
+        "storage": storage,
+        "repo": repo,
+    }
 
 
 @pytest.fixture

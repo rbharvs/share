@@ -13,9 +13,10 @@
 //   - Typecheck: each workspace's own `npm run typecheck` (project-scoped tsc),
 //     not the per-file tsc builtin.
 //
-// Hook split: pre-commit = fast auto-fixers on staged files; pre-push =
-// read-only project checks incl. typecheck. Full test suites (pytest/mocha/
-// vitest) are intentionally left to CI, not the hooks.
+// Hooks: a single comprehensive pre-commit (no pre-push) -- auto-fixers on
+// staged files, plus typechecks and all three test suites (backend pytest,
+// frontend vitest, infra mocha) so everything is green before a commit lands.
+// Each step only fires when a file under its workspace is staged.
 //
 // SECURITY: committed file -- contains no ids, tokens, hostnames, or secrets.
 amends "package://github.com/jdx/hk/releases/download/v1.48.0/hk@1.48.0#/Config.pkl"
@@ -59,18 +60,30 @@ local tscInfra = new Step {
   dir = "infra"
   check = "npm run typecheck"
 }
-// Frontend unit tests (vitest). Fast (~0.5s), so it runs on commit when a
-// frontend TS file changes; the whole suite runs (not file-scoped). Backend
-// pytest / infra mocha stay out of the hooks (slow / network) -- CI owns those.
+// --- Test suites (run whole-suite when matching files change; no {{ files }}) ---
+
 local frontendTest = new Step {
   glob = List("**/*.{ts,tsx}")
   dir = "frontend"
   check = "npm run test"
 }
+local infraTest = new Step {
+  glob = List("**/*.ts")
+  dir = "infra"
+  check = "npm test"
+}
+local backendTest = new Step {
+  glob = List("**/*.py")
+  dir = "backend"
+  check = "uv run pytest"
+}
 
+// One comprehensive pre-commit hook (no pre-push): we want everything green
+// before a commit lands. Fixers auto-fix staged files; the typechecks and all
+// three test suites gate. Backend pytest is ~12s (session-scoped moto); the
+// other suites are ~0.5s each. A step only runs when a file under its workspace
+// is staged, so unrelated commits stay cheap.
 hooks {
-  // Fast, auto-fixing pass on staged files. stash="git" so unstaged changes
-  // don't pollute fixer runs. Frontend vitest also runs here on frontend changes.
   ["pre-commit"] {
     fix = true
     stash = "git"
@@ -79,22 +92,14 @@ hooks {
       ["ruff-format"] = ruffFormat
       ["oxlint"] = oxlint
       ["oxfmt"] = oxfmt
-      ["frontend-test"] = frontendTest
-    }
-  }
-  // Slower, read-only project checks before push. Backend/infra test suites stay
-  // in CI (slow / network); frontend vitest already ran in pre-commit.
-  ["pre-push"] {
-    steps {
-      ["ruff"] = ruffLint
-      ["ruff-format"] = ruffFormat
-      ["oxlint"] = oxlint
-      ["oxfmt"] = oxfmt
       ["tsc-frontend"] = tscFrontend
       ["tsc-infra"] = tscInfra
+      ["backend-test"] = backendTest
+      ["frontend-test"] = frontendTest
+      ["infra-test"] = infraTest
     }
   }
-  // `hk check` / `hk fix` for ad-hoc local runs.
+  // `hk check` / `hk fix` for ad-hoc local runs (mirrors pre-commit).
   ["check"] {
     steps {
       ["ruff"] = ruffLint
@@ -103,7 +108,9 @@ hooks {
       ["oxfmt"] = oxfmt
       ["tsc-frontend"] = tscFrontend
       ["tsc-infra"] = tscInfra
+      ["backend-test"] = backendTest
       ["frontend-test"] = frontendTest
+      ["infra-test"] = infraTest
     }
   }
   ["fix"] {
