@@ -20,10 +20,12 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^24",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "happy-dom": "^20.10.6",
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3",
     "vite": "^8.1.0",
