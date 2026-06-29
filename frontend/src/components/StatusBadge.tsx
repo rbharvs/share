@@ -8,5 +8,11 @@ const VARIANT: Record<ContentItem["status"], "success" | "muted" | "outline"> = 
 };
 
 export function StatusBadge({ status }: { status: ContentItem["status"] }) {
-  return <Badge variant={VARIANT[status] ?? "outline"}>{status}</Badge>;
+  // Fixed width + centered text so every status box is the same size regardless
+  // of label length (matches the equal-width action buttons).
+  return (
+    <Badge variant={VARIANT[status] ?? "outline"} className="min-w-[7rem] justify-center">
+      {status}
+    </Badge>
+  );
 }
