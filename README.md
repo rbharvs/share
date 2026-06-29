@@ -63,7 +63,7 @@ issues/    the vertical-slice breakdown the build followed
 ```bash
 mise install              # install the pinned toolchain (from mise.toml + mise.lock)
 mise trust                # trust the committed config
-hk install --mise         # wire up git pre-commit / pre-push hooks
+hk install --mise         # wire up the git pre-commit hook
 ```
 
 Backend deps use `uv`; frontend and infra use npm. Common tasks (`mise tasks` lists them all):

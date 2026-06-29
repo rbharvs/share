@@ -49,7 +49,7 @@ Never serve arbitrary uploaded content from `share.example.com`. Never expose da
 - `mise` pins all dev tool versions (node 24, python 3.13, uv, Pulumi CLI, hk, oxlint, oxfmt) in `mise.toml` + `mise.lock`, and is the task runner. There is no Makefile. Run `mise tasks` to list tasks; common ones: `mise run dev | preview | check | test | fix | build | deploy | boundary-checks`.
 - First-time setup: `mise install`, `mise trust`, then `hk install --mise` for git hooks.
 - Lint/format: `ruff` for Python (in the backend `uv` dev group — do NOT add ruff to mise), `oxlint` + `oxfmt` for frontend + infra TS/JS only (configs `.oxlintrc.json` / `.oxfmtrc.json`). `oxfmt` is deliberately scoped to TS/JS so it never reformats Pulumi YAML / JSON / the example config.
-- hk runs pre-commit (fast fixers) and pre-push (read-only checks); full test suites stay in CI.
+- hk runs a single comprehensive pre-commit hook (no pre-push): auto-fixers + typechecks + all three test suites (backend pytest, frontend vitest, infra mocha). Each step only fires when a file under its workspace is staged. CI re-runs the same checks.
 - Dependency pin policy: newest release >= 72h old (`min-release-age=3` in each `.npmrc`; `mise run relock` with `--exclude-newer '3 days'` for Python; Renovate enforces going forward). `wenmode` and `syrupy` are documented exceptions — keep their exact pins; do not let `mise run relock` drop them.
 - `UV_FROZEN=1` (set in `mise.toml`) makes backend installs use `uv.lock` exactly; update the lock only via `mise run relock`.
 

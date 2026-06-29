@@ -782,7 +782,7 @@ Tooling (versions + tasks):
 - `mise` is the single source of truth for dev tool versions (node, python, uv, the Pulumi CLI, hk, oxlint, oxfmt), pinned in `mise.toml` and reproduced via the committed `mise.lock`. It is also the task runner; there is no Makefile.
 - The dev/build host runs node 24 and python 3.13. The deployed Lambda runtime stays `python3.12` (see "Runtime split" below).
 - Lint/format: `ruff` for Python (lives in the backend `uv` dev group); `oxlint` + `oxfmt` (oxc) for frontend + infra TS/JS only. Typechecking is each workspace's own `tsc`.
-- `hk` (configured in `hk.pkl`, installed with `hk install --mise`) runs git hooks: pre-commit = fast auto-fixers on staged files; pre-push = read-only project checks (lint, format-check, typecheck). Test suites are left to CI, not hooks.
+- `hk` (configured in `hk.pkl`, installed with `hk install --mise`) runs a single comprehensive pre-commit hook (no pre-push): auto-fixers on staged files, typechecks, and all three test suites (backend pytest, frontend vitest, infra mocha). Each step only fires when a file under its workspace is staged. CI mirrors the same checks. Backend pytest uses session-scoped moto fixtures to keep the suite fast (~12s).
 
 Backend:
 

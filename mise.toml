@@ -53,8 +53,8 @@ UV_FROZEN = "1"
 # --- Aggregate targets (was: make test / check / format / fix) ---
 
 [tasks.test]
-description = "Run all test suites (backend pytest + infra mocha)"
-depends = ["backend:test", "infra:test"]
+description = "Run all test suites (backend pytest + frontend vitest + infra mocha)"
+depends = ["backend:test", "frontend:test", "infra:test"]
 
 [tasks.check]
 description = "Lint + typecheck everything"
@@ -101,6 +101,11 @@ run = "uv run ruff check . && uv run ruff format --check ."
 description = "Frontend typecheck (tsc -b --noEmit)"
 dir = "frontend"
 run = "npm run typecheck"
+
+[tasks."frontend:test"]
+description = "Frontend unit tests (vitest)"
+dir = "frontend"
+run = "npm run test"
 
 [tasks."frontend:build"]
 description = "Build the SPA and copy the bundle into the backend static dir"

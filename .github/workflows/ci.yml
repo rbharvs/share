@@ -57,6 +57,8 @@ jobs:
         run: mise exec -- npm ci
       - name: Typecheck
         run: mise run frontend:check
+      - name: Tests
+        run: mise run frontend:test
       - name: Build
         run: mise run frontend:build
 
