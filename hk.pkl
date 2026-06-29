@@ -59,10 +59,18 @@ local tscInfra = new Step {
   dir = "infra"
   check = "npm run typecheck"
 }
+// Frontend unit tests (vitest). Fast (~0.5s), so it runs on commit when a
+// frontend TS file changes; the whole suite runs (not file-scoped). Backend
+// pytest / infra mocha stay out of the hooks (slow / network) -- CI owns those.
+local frontendTest = new Step {
+  glob = List("**/*.{ts,tsx}")
+  dir = "frontend"
+  check = "npm run test"
+}
 
 hooks {
   // Fast, auto-fixing pass on staged files. stash="git" so unstaged changes
-  // don't pollute fixer runs.
+  // don't pollute fixer runs. Frontend vitest also runs here on frontend changes.
   ["pre-commit"] {
     fix = true
     stash = "git"
@@ -71,9 +79,11 @@ hooks {
       ["ruff-format"] = ruffFormat
       ["oxlint"] = oxlint
       ["oxfmt"] = oxfmt
+      ["frontend-test"] = frontendTest
     }
   }
-  // Slower, read-only project checks before push. No tests here (CI owns those).
+  // Slower, read-only project checks before push. Backend/infra test suites stay
+  // in CI (slow / network); frontend vitest already ran in pre-commit.
   ["pre-push"] {
     steps {
       ["ruff"] = ruffLint
@@ -93,6 +103,7 @@ hooks {
       ["oxfmt"] = oxfmt
       ["tsc-frontend"] = tscFrontend
       ["tsc-infra"] = tscInfra
+      ["frontend-test"] = frontendTest
     }
   }
   ["fix"] {
